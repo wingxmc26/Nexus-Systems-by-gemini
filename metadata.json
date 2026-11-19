@@ -1,0 +1,6 @@
+{
+  "name": "Nexus System",
+  "description": "Advanced offline Android system diagnostics and hardware telemetry utility.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

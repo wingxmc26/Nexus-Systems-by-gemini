@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Nexus System</string>
+    <string name="nexus_brand_title">NEXUS SYSTEM</string>
+    <string name="nexus_brand_subtitle">OFFLINE DIAGNOSTICS ENGINE</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_telemetry">Telemetry</string>
+    <string name="nav_lab">Sensor Lab</string>
+    <string name="nav_system">System</string>
+    <string name="unavailable_label">Unavailable</string>
+    <string name="restricted_os_label">Restricted by Android OS</string>
+    <string name="offline_badge">100% OFFLINE</string>
+</resources>
