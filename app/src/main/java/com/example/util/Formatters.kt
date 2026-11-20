@@ -36,6 +36,15 @@ object Formatters {
     }.trim()
   }
 
+  fun formatTimer(ms: Long): String {
+    if (ms <= 0L) return "00:00:00"
+    val totalSeconds = ms / 1000L
+    val hours = totalSeconds / 3600L
+    val minutes = (totalSeconds % 3600L) / 60L
+    val seconds = totalSeconds % 60L
+    return String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+  }
+
   fun formatFrequencyKhz(khz: Long): String {
     return if (khz >= 1_000_000L) {
       String.format(Locale.US, "%.2f GHz", khz / 1_000_000.0)
@@ -54,9 +63,56 @@ object Formatters {
     return sdf.format(Date(ms))
   }
 
-  fun formatCurrentMa(microAmps: Int): String {
+  fun formatDurationWords(ms: Long): String {
+    val safeMs = ms.coerceAtLeast(0L)
+    val totalSeconds = safeMs / 1000L
+    if (totalSeconds < 60L) {
+      return if (totalSeconds == 1L) "1 second" else "$totalSeconds seconds"
+    }
+    val totalMinutes = totalSeconds / 60L
+    val hours = totalMinutes / 60L
+    val mins = totalMinutes % 60L
+    val parts = mutableListOf<String>()
+    if (hours > 0L) {
+      parts += if (hours == 1L) "1 hour" else "$hours hours"
+    }
+    if (mins > 0L || hours == 0L) {
+      parts += if (mins == 1L) "1 minute" else "$mins minutes"
+    }
+    return parts.joinToString(" ")
+  }
+
+  fun formatClock12h(ms: Long): String {
+    val sdf = SimpleDateFormat("h:mm a", Locale.US)
+    return sdf.format(Date(ms))
+  }
+
+  fun formatChargingSessionLog(
+    startPct: Int,
+    endPct: Int,
+    durationMs: Long,
+    timestampMs: Long,
+    isActive: Boolean,
+  ): String {
+    val durWords = formatDurationWords(durationMs)
+    val timeStr = formatClock12h(timestampMs)
+    return if (isActive) {
+      "Charging $startPct-$endPct% • $durWords elapsed (started at $timeStr)"
+    } else {
+      "Charging $startPct-$endPct% in $durWords at $timeStr"
+    }
+  }
+
+  fun formatCurrentMa(microAmps: Int, isCharging: Boolean): String {
+    // BatteryManager.BATTERY_PROPERTY_CURRENT_NOW is documented in microamperes (µA).
     val ma = microAmps / 1000.0
-    val sign = if (ma > 0) "+" else if (ma < 0) "-" else ""
-    return String.format(Locale.US, "%s%.0f mA", sign, abs(ma))
+    val absMa = abs(ma)
+    val prefix = when {
+      ma > 0 -> "+"
+      ma < 0 -> "-"
+      isCharging -> "+"
+      else -> ""
+    }
+    return String.format(Locale.US, "%s%.0f mA", prefix, absMa)
   }
 }

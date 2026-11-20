@@ -13,11 +13,12 @@ enum class DashboardModuleId(
   val title: String,
   val subtitle: String,
 ) {
-  DEVICE_OVERVIEW("device_overview", "Device & OS Identity", "Model, Android API, uptime"),
-  BATTERY_CARD("battery_card", "Battery Telemetry", "Charge level, thermal & source"),
-  MEMORY_STORAGE_CARD("memory_storage_card", "Memory & Storage", "Live RAM & internal storage"),
-  CPU_CARD("cpu_card", "CPU Architecture", "Cores, ABI & clock telemetry"),
-  QUICK_MODULES("quick_modules", "Diagnostic Modules", "Direct launch to all utilities");
+  BATTERY_CARD("battery_card", "Battery & Charging", "Level, current, temperature & session timer"),
+  RAM_CARD("ram_card", "RAM Usage", "Active memory consumption & available RAM"),
+  STORAGE_CARD("storage_card", "Storage Usage", "Internal storage capacity & free space"),
+  DEVICE_OVERVIEW("device_overview", "Device Information", "Model, Android version, display & processor"),
+  FAVORITE_SHORTCUTS("favorite_shortcuts", "Favorite Shortcuts", "Pinned launchable apps & activities"),
+  QUICK_MODULES("quick_modules", "System Suite", "Organized access to all Nexus System modules");
 
   companion object {
     val defaultOrder: List<DashboardModuleId> = entries.toList()
@@ -31,6 +32,29 @@ data class DashboardPreferences(
   val refreshIntervalMs: Long = 2000L,
   val cardOrder: List<DashboardModuleId> = DashboardModuleId.defaultOrder,
   val hiddenModules: Set<DashboardModuleId> = emptySet(),
+)
+
+enum class WallpaperMediaType(val label: String) {
+  VIDEO("Video"),
+  IMAGE("Image"),
+  GIF("Animated GIF"),
+}
+
+data class LiveWallpaperConfig(
+  val activeWallpaperId: Long = 0L,
+  val activeLocalPath: String? = null,
+  val videoFileName: String? = null,
+  val mediaType: WallpaperMediaType = WallpaperMediaType.VIDEO,
+  val muteAudio: Boolean = true,
+  val scaleCrop: Boolean = true,
+  val loopPlayback: Boolean = true,
+  val playbackSpeed: Float = 1.0f,
+  val batterySaverPause: Boolean = true,
+  val offsetXPercent: Float = 0f,
+  val offsetYPercent: Float = 0f,
+  val zoomScale: Float = 1.0f,
+  val hasLocalVideo: Boolean = false,
+  val isCurrentlySetAsWallpaper: Boolean = false,
 )
 
 data class BatteryTelemetry(
@@ -47,6 +71,12 @@ data class BatteryTelemetry(
   val energyCounterNwh: MetricValue<Long> = MetricValue.Unavailable("Not exposed by hardware"),
   val cycleCount: MetricValue<Int> = MetricValue.Unavailable("Not exposed by Android API / device"),
   val timestampMs: Long = System.currentTimeMillis(),
+)
+
+data class ActiveChargingSession(
+  val startTimeMs: Long,
+  val startPercentage: Int,
+  val chargeSource: String,
 )
 
 data class CpuCoreFreq(
@@ -92,6 +122,68 @@ data class HardwareTelemetry(
   val awakeUptimeMs: Long,
 )
 
+data class SystemMemoryDetails(
+  val totalRamBytes: Long,
+  val availableRamBytes: Long,
+  val usedRamBytes: Long,
+  val usagePercent: Float,
+  val lowMemoryThresholdBytes: Long,
+  val isLowMemory: Boolean,
+  val nexusAppPssKb: MetricValue<Int>,
+  val cachedMemoryBytes: MetricValue<Long>,
+  val buffersBytes: MetricValue<Long>,
+  val swapTotalBytes: MetricValue<Long>,
+  val swapFreeBytes: MetricValue<Long>,
+  val visibleProcessCount: Int = 0,
+)
+
+data class ManagedAppSummary(
+  val appName: String,
+  val packageName: String,
+  val versionName: String,
+  val versionCode: Long,
+  val isSystemApp: Boolean,
+  val isLaunchable: Boolean,
+  val apkSizeBytes: MetricValue<Long>,
+  val installedAtMs: Long,
+  val updatedAtMs: Long,
+  val targetSdk: Int,
+  val requestedPermissions: List<String>,
+  val foregroundUsageMs: Long?,
+  val lastUsedMs: Long?,
+  val icon: Drawable?,
+)
+
+enum class ShortcutShape(val id: String, val label: String) {
+  ROUNDED("rounded", "Rounded"),
+  CIRCLE("circle", "Circle"),
+  SQUIRCLE("squircle", "Squircle"),
+  SQUARE("square", "Square");
+
+  companion object {
+    fun fromId(id: String?): ShortcutShape = entries.firstOrNull { it.id == id } ?: ROUNDED
+  }
+}
+
+data class ExportedActivityInfo(
+  val className: String,
+  val simpleName: String,
+  val label: String,
+  val permissionRequired: String?,
+)
+
+data class LaunchablePackageInfo(
+  val appName: String,
+  val packageName: String,
+  val versionName: String = "N/A",
+  val targetSdk: Int = 0,
+  val isSystemApp: Boolean,
+  val hasLauncherIntent: Boolean,
+  val exportedActivities: List<ExportedActivityInfo>,
+  val totalActivityCount: Int,
+  val icon: Drawable?,
+)
+
 data class StorageOverview(
   val internalTotalBytes: Long,
   val internalAvailableBytes: Long,
@@ -121,10 +213,27 @@ data class SafFileEntry(
   val relativePath: String,
 )
 
+data class DirectFileEntry(
+  val path: String,
+  val name: String,
+  val sizeBytes: Long,
+  val isDirectory: Boolean,
+  val lastModifiedMs: Long,
+  val category: FileCategory,
+  val isRestricted: Boolean = false,
+  val childCount: Int = 0,
+)
+
 data class CategoryBreakdown(
   val category: FileCategory,
   val fileCount: Int,
   val totalBytes: Long,
+)
+
+data class DuplicateFileGroup(
+  val sha256: String,
+  val sizeBytes: Long,
+  val files: List<SafFileEntry>,
 )
 
 data class SafAnalysisState(
@@ -135,46 +244,10 @@ data class SafAnalysisState(
   val totalScannedBytes: Long = 0L,
   val categories: List<CategoryBreakdown> = emptyList(),
   val largestFiles: List<SafFileEntry> = emptyList(),
+  val duplicateGroups: List<DuplicateFileGroup> = emptyList(),
+  val emptyFolders: List<SafFileEntry> = emptyList(),
   val allEntries: List<SafFileEntry> = emptyList(),
   val errorMessage: String? = null,
-)
-
-data class NetworkInterfaceEntry(
-  val name: String,
-  val isUp: Boolean,
-  val isLoopback: Boolean,
-  val mtu: MetricValue<Int>,
-  val addresses: List<String>,
-)
-
-data class NetworkDiagnosticCheck(
-  val title: String,
-  val detail: String,
-  val passed: Boolean,
-)
-
-data class NetworkDiagnostics(
-  val isConnected: Boolean,
-  val transportLabel: String,
-  val isMetered: Boolean,
-  val isValidated: Boolean,
-  val isAirplaneModeOn: Boolean,
-  val wifiLinkSpeedMbps: MetricValue<Int>,
-  val wifiFrequencyMhz: MetricValue<Int>,
-  val wifiRssiDbm: MetricValue<Int>,
-  val wifiStandard: MetricValue<String>,
-  val interfaceName: MetricValue<String>,
-  val localIpv4Addresses: List<String>,
-  val localIpv6Addresses: List<String>,
-  val dnsServers: List<String>,
-  val totalRxBytes: MetricValue<Long>,
-  val totalTxBytes: MetricValue<Long>,
-  val mobileRxBytes: MetricValue<Long>,
-  val mobileTxBytes: MetricValue<Long>,
-  val appRxBytes: MetricValue<Long>,
-  val appTxBytes: MetricValue<Long>,
-  val interfaces: List<NetworkInterfaceEntry>,
-  val checks: List<NetworkDiagnosticCheck>,
 )
 
 enum class CoreSensorType(
@@ -223,51 +296,206 @@ data class DisplaySpecs(
   val isWideColorGamut: Boolean,
 )
 
-data class AudioDeviceSummary(
-  val id: Int,
-  val productName: String,
-  val typeLabel: String,
-  val isSink: Boolean,
-  val isSource: Boolean,
-  val sampleRates: List<Int>,
-  val channelCounts: List<Int>,
-)
+enum class ControlCapabilityType(val label: String) {
+  DIRECT("Direct Control"),
+  PERMISSION_REQUIRED("Permission Needed"),
+  SETTINGS_SHORTCUT("System Settings"),
+  UNSUPPORTED("Not Supported"),
+}
 
-data class AudioEnvironmentInfo(
-  val ringerModeLabel: String,
-  val mediaVolume: Int,
-  val mediaMaxVolume: Int,
-  val ringVolume: Int,
-  val ringMaxVolume: Int,
-  val alarmVolume: Int,
-  val alarmMaxVolume: Int,
-  val isMicrophoneMuted: Boolean,
-  val devices: List<AudioDeviceSummary>,
-)
-
-data class InstalledAppEntry(
-  val appName: String,
-  val packageName: String,
-  val versionName: String,
-  val versionCode: Long,
-  val targetSdk: Int,
-  val isSystemApp: Boolean,
-  val apkSizeBytes: MetricValue<Long>,
-  val permissions: List<AppPermissionItem>,
-  val canLaunch: Boolean,
-  val icon: Drawable?,
-)
-
-data class AppPermissionItem(
-  val name: String,
-  val isGranted: Boolean,
-)
-
-data class SystemShortcut(
+data class SystemControlEntry(
   val id: String,
   val title: String,
-  val subtitle: String,
+  val currentStateText: String,
+  val description: String,
   val action: String,
   val isAvailable: Boolean,
-  val availabilityNote: String? = null,
+  val capabilityType: ControlCapabilityType = ControlCapabilityType.SETTINGS_SHORTCUT,
+  val requiresPackageUri: Boolean = false,
+)
+
+// Media Player Models
+data class LocalAudioTrack(
+  val id: Long,
+  val uriString: String,
+  val title: String,
+  val artist: String,
+  val album: String,
+  val albumId: Long,
+  val durationMs: Long,
+  val folderName: String,
+  val filePath: String,
+  val mimeType: String,
+  val dateAddedSec: Long,
+)
+
+data class LocalVideoItem(
+  val id: Long,
+  val uriString: String,
+  val title: String,
+  val folderName: String,
+  val durationMs: Long,
+  val width: Int,
+  val height: Int,
+  val sizeBytes: Long,
+  val mimeType: String,
+  val dateAddedSec: Long,
+  val isHdrLikely: Boolean = false,
+)
+
+enum class VideoAspectMode(val label: String) {
+  FIT("Fit"),
+  FILL("Fill / Crop"),
+  RATIO_16_9("16:9"),
+  RATIO_4_3("4:3"),
+}
+
+enum class VideoDecoderMode(val label: String) {
+  AUTO_HW("Hardware Priority"),
+  PREFER_SW("Prefer Software Fallback"),
+}
+
+// Widget Studio Models
+enum class VisualElementKind(val label: String) {
+  TEXT("Custom Label"),
+  CLOCK("Live Clock"),
+  DATE("Date"),
+  BATTERY("Battery Level"),
+  CHARGING("Charging Status"),
+  RAM("RAM Usage"),
+  STORAGE("Storage Free"),
+  DEVICE("Device Model"),
+  MUSIC("Now Playing"),
+  ICON("System Icon"),
+  IMAGE("Custom Image"),
+}
+
+data class VisualWidgetElement(
+  val id: String,
+  val kind: VisualElementKind,
+  val label: String = "",
+  val xFraction: Float = 0.08f,
+  val yFraction: Float = 0.15f,
+  val widthFraction: Float = 0.84f,
+  val heightFraction: Float = 0.22f,
+  val fontSizeSp: Float = 16f,
+  val fontWeightBold: Boolean = true,
+  val textColorArgb: Long = 0xFFFFFFFFL,
+  val alignment: Int = 0, // 0=Left, 1=Center, 2=Right
+  val paddingDp: Int = 4,
+  val backgroundColorArgb: Long = 0x00000000L,
+  val cornerRadiusDp: Int = 8,
+  val visible: Boolean = true,
+  val layerOrder: Int = 0,
+  val imageUriOrPath: String? = null,
+)
+
+data class VisualWidgetSpec(
+  val backgroundColorArgb: Long = 0xFF0A0B0EL,
+  val gradientEndColorArgb: Long? = null,
+  val isTransparent: Boolean = false,
+  val htmlTransparent: Boolean = true,
+  val isGlassStyle: Boolean = true,
+  val borderColorArgb: Long = 0x4DE11D48L,
+  val borderWidthDp: Float = 1.5f,
+  val cornerRadiusDp: Int = 20,
+  val blurIntensity: Float = 0f,
+  val sizePresetName: String = "MEDIUM",
+  val targetWidthDp: Int = 328,
+  val targetHeightDp: Int = 160,
+  val containerPaddingDp: Int = 12,
+  val refreshIntervalMinutes: Int = 15,
+  val elements: List<VisualWidgetElement> = emptyList(),
+)
+
+data class BuiltInWidgetStyleConfig(
+  val backgroundColorArgb: Long = 0xFF050608L,
+  val opacity: Float = 1.0f,
+  val accentColorArgb: Long = 0xFFE11D48L,
+  val textColorArgb: Long = 0xFFFFFFFFL,
+  val secondaryTextColorArgb: Long = 0xFF9CA3AFL,
+  val borderColorArgb: Long = 0x26FFFFFFL,
+  val fontSizeScale: Float = 1.0f,
+  val fontWeightBold: Boolean = true,
+  val paddingDp: Int = 14,
+  val alignment: Int = 0, // 0=Left, 1=Center, 2=Right
+  val cornerRadiusDp: Int = 18,
+  val showSecondaryDetails: Boolean = true,
+  val isCustomized: Boolean = false,
+)
+
+// Depth Clock Models
+enum class DepthClockMode(val label: String) {
+  DIGITAL("Digital"),
+  ANALOG("Analog"),
+  DUAL("Layered Dual"),
+}
+
+enum class ClockFontChoice(val id: String, val label: String) {
+  INTER_BOLD("inter_bold", "Inter Bold"),
+  INTER_LIGHT("inter_light", "Inter Clean"),
+  SERIF("serif", "Editorial Serif"),
+  CONDENSED("condensed", "Condensed"),
+}
+
+data class DepthClockConfig(
+  val mode: DepthClockMode = DepthClockMode.DIGITAL,
+  val fontChoice: ClockFontChoice = ClockFontChoice.INTER_BOLD,
+  val showSeconds: Boolean = false,
+  val showDate: Boolean = true,
+  val use24Hour: Boolean = true,
+  val clockColorArgb: Long = 0xFFFFFFFFL,
+  val accentColorArgb: Long = 0xFFE11D48L,
+  val backgroundColorArgb: Long = 0xFF08090CL,
+  val backgroundOpacity: Float = 0.88f,
+  val glassBlurOverlay: Boolean = true,
+  val backgroundImagePath: String? = null,
+  val foregroundMaskImagePath: String? = null,
+  val depthLayerStrength: Float = 0.45f,
+  val clockScale: Float = 1.0f,
+  val offsetYFraction: Float = 0.0f,
+)
+
+// Audio Effects / Sound Booster
+data class AudioEffectCapabilities(
+  val hasEqualizer: Boolean,
+  val bandCount: Int,
+  val bandCenterHz: List<Int>,
+  val minBandLevelMb: Int,
+  val maxBandLevelMb: Int,
+  val hasBassBoost: Boolean,
+  val hasVirtualizer: Boolean,
+  val hasLoudnessEnhancer: Boolean,
+)
+
+data class SoundBoosterState(
+  val enabled: Boolean = false,
+  val activePresetName: String = "Normal",
+  val tenBandOffsetsMb: List<Int> = List(10) { 0 },
+  val bassStrength: Int = 0, // 0..1000
+  val trebleBoostMb: Int = 0, // -600..600
+  val virtualizerStrength: Int = 0, // 0..1000
+  val preampGainMb: Int = 0, // 0..800 safe clamp
+  val audioSessionId: Int = 0,
+  val capabilities: AudioEffectCapabilities? = null,
+  val statusMessage: String = "Attach playback to apply real hardware audio effects.",
+)
+
+// Screen Recorder Models
+data class ScreenRecorderConfig(
+  val resolutionLabel: String = "1080p",
+  val fps: Int = 30,
+  val bitrateMbps: Int = 8,
+  val recordMicrophone: Boolean = false,
+  val captureInternalAudioAttempt: Boolean = false,
+)
+
+data class RecordedMediaItem(
+  val id: String,
+  val name: String,
+  val pathOrUri: String,
+  val sizeBytes: Long,
+  val createdAtMs: Long,
+  val isScreenshot: Boolean,
+  val durationMs: Long = 0L,
 )

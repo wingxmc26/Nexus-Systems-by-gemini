@@ -16,10 +16,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -40,7 +38,6 @@ import com.example.ui.components.NexusModuleHeader
 import com.example.ui.components.SectionHeader
 import com.example.ui.components.StatusPill
 import com.example.ui.components.TelemetryArcGauge
-import com.example.ui.components.TelemetrySparkline
 import com.example.ui.theme.NexusTextStyles
 import com.example.ui.theme.NexusThemeExtras
 import com.example.ui.viewmodel.BatteryViewModel
@@ -55,7 +52,9 @@ fun BatteryScreen(
 ) {
   val colors = NexusThemeExtras.colors
   val telemetry by viewModel.telemetry.collectAsStateWithLifecycle()
-  val history by viewModel.history.collectAsStateWithLifecycle()
+  val sessions by viewModel.sessions.collectAsStateWithLifecycle()
+  val activeSession by viewModel.activeSession.collectAsStateWithLifecycle()
+  val chargingDurationMs by viewModel.chargingDurationMs.collectAsStateWithLifecycle()
 
   val pct = (telemetry.percentage as? MetricValue.Available)?.value
   val gaugeColor = when {
@@ -70,12 +69,12 @@ fun BatteryScreen(
       .background(colors.background),
   ) {
     NexusModuleHeader(
-      title = "Battery Intelligence",
-      subtitle = "LIVE POWER & THERMAL TELEMETRY",
+      title = "Battery & Charging",
+      subtitle = "Live battery status & charging time log",
       onBack = onBack,
       trailingContent = {
         StatusPill(
-          text = telemetry.statusLabel.uppercase(),
+          text = telemetry.statusLabel,
           color = gaugeColor,
         )
       },
@@ -89,7 +88,7 @@ fun BatteryScreen(
         top = 4.dp,
         bottom = contentPadding.calculateBottomPadding() + 24.dp,
       ),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
       item {
         NexusGlassCard(accentHighlight = true, testTag = "battery_hero_card") {
@@ -101,12 +100,14 @@ fun BatteryScreen(
               progress = (pct ?: 0) / 100f,
               centerValue = pct?.let { "$it%" } ?: "N/A",
               centerLabel = telemetry.chargeSource,
-              size = 112.dp,
-              strokeWidth = 10.dp,
+              size = 104.dp,
+              strokeWidth = 9.dp,
               gaugeColor = gaugeColor,
             )
             Spacer(modifier = Modifier.width(18.dp))
             Column(modifier = Modifier.weight(1f)) {
+              MetricKeyValueRow("Status", telemetry.statusLabel)
+              MetricKeyValueRow("Source", telemetry.chargeSource)
               MetricValueRow(
                 label = "Temperature",
                 metric = telemetry.temperatureCelsius,
@@ -117,14 +118,42 @@ fun BatteryScreen(
                 metric = telemetry.voltageVolts,
                 formatter = { String.format(Locale.US, "%.3f V", it) },
               )
-              MetricKeyValueRow(
-                label = "Health",
-                value = telemetry.healthLabel,
-                valueColor = if (telemetry.healthLabel == "Good") colors.nominal else colors.warning,
+            }
+          }
+        }
+      }
+
+      item {
+        NexusGlassCard(testTag = "battery_timer_card") {
+          SectionHeader(
+            title = "Charging Duration Counter",
+            icon = Icons.Default.Timer,
+            trailingText = if (telemetry.isCharging) "Active" else "Idle",
+          )
+          Spacer(modifier = Modifier.height(8.dp))
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+          ) {
+            Column {
+              Text(
+                text = if (telemetry.isCharging && activeSession != null) {
+                  Formatters.formatTimer(chargingDurationMs)
+                } else {
+                  "00:00:00"
+                },
+                style = NexusTextStyles.MetricLarge,
+                color = if (telemetry.isCharging) colors.nominal else colors.textMuted,
               )
-              MetricValueRow(
-                label = "Technology",
-                metric = telemetry.technology,
+              Text(
+                text = if (telemetry.isCharging && activeSession != null) {
+                  "Started at ${Formatters.formatClock12h(activeSession!!.startTimeMs)} (${activeSession!!.startPercentage}%)"
+                } else {
+                  "Connect charger to start live charging duration tracking"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.textSecondary,
               )
             }
           }
@@ -133,13 +162,21 @@ fun BatteryScreen(
 
       item {
         NexusGlassCard(testTag = "battery_electrical_card") {
-          SectionHeader(title = "Power & Hardware Counters", icon = Icons.Default.BatteryChargingFull)
+          SectionHeader(title = "Battery Details", icon = Icons.Default.BatteryChargingFull)
           Spacer(modifier = Modifier.height(6.dp))
-          MetricKeyValueRow(label = "Charge Source", value = telemetry.chargeSource)
           MetricValueRow(
-            label = "Instant Current",
+            label = if (telemetry.isCharging) "Charging Current" else "Discharging Current",
             metric = telemetry.currentMicroAmps,
-            formatter = { Formatters.formatCurrentMa(it) },
+            formatter = { Formatters.formatCurrentMa(it, telemetry.isCharging) },
+          )
+          MetricKeyValueRow(
+            label = "Health",
+            value = telemetry.healthLabel,
+            valueColor = if (telemetry.healthLabel == "Good") colors.nominal else colors.warning,
+          )
+          MetricValueRow(
+            label = "Technology",
+            metric = telemetry.technology,
           )
           MetricValueRow(
             label = "Charge Counter",
@@ -160,98 +197,73 @@ fun BatteryScreen(
       }
 
       item {
-        NexusGlassCard(testTag = "battery_history_controls") {
+        NexusGlassCard(testTag = "battery_sessions_card") {
           Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
           ) {
             SectionHeader(
-              title = "Charging History",
-              icon = Icons.Default.History,
-              trailingText = "${history.size} LOGS",
+              title = "Charging Time Log",
+              icon = Icons.Default.Timer,
+              trailingText = "${sessions.size} logged",
             )
           }
           Spacer(modifier = Modifier.height(8.dp))
-
-          if (history.size >= 2) {
-            val points = history.reversed().map { it.percentage.toFloat() }
-            TelemetrySparkline(
-              samples = points,
-              lineColor = gaugeColor,
-              fixedRange = 0f to 100f,
+          if (sessions.isEmpty()) {
+            EmptyOrErrorState(
+              icon = Icons.Default.BatteryChargingFull,
+              title = "No Charging Logs Yet",
+              description = "Connect and unplug your charger to automatically record entries like: Charging 67-89% in 23 minutes at 8:30 PM.",
             )
+          } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+              sessions.take(25).forEachIndexed { index, session ->
+                val displayTs = if (session.isActive) {
+                  session.startTimeMs
+                } else {
+                  session.endTimeMs ?: System.currentTimeMillis()
+                }
+                val endMs = session.endTimeMs ?: System.currentTimeMillis()
+                val durMs = (endMs - session.startTimeMs).coerceAtLeast(0L)
+                val logSummary = Formatters.formatChargingSessionLog(
+                  startPct = session.startPercentage,
+                  endPct = session.endPercentage,
+                  durationMs = durMs,
+                  timestampMs = displayTs,
+                  isActive = session.isActive,
+                )
+
+                Column(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                ) {
+                  Text(
+                    text = logSummary,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (session.isActive) colors.nominal else colors.textPrimary,
+                  )
+                  Spacer(modifier = Modifier.height(2.dp))
+                  Text(
+                    text = "${session.chargeSource} • ${if (session.isActive) "Charging Now" else Formatters.formatDateTime(displayTs)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.textSecondary,
+                  )
+                }
+                if (index < sessions.take(25).lastIndex) {
+                  HorizontalDivider(color = colors.glassBorder)
+                }
+              }
+            }
             Spacer(modifier = Modifier.height(10.dp))
-          }
-
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-          ) {
-            Button(
-              onClick = { viewModel.logSnapshotNow() },
-              colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
-              modifier = Modifier
-                .weight(1f)
-                .testTag("log_battery_snapshot_button"),
-            ) {
-              Icon(Icons.Default.Save, contentDescription = null)
-              Spacer(modifier = Modifier.width(6.dp))
-              Text("Log Snapshot")
-            }
             OutlinedButton(
-              onClick = { viewModel.clearHistory() },
-              enabled = history.isNotEmpty(),
-              modifier = Modifier.testTag("clear_battery_history_button"),
+              onClick = { viewModel.clearSessions() },
+              modifier = Modifier.testTag("clear_charging_logs_button"),
             ) {
-              Icon(Icons.Default.DeleteOutline, contentDescription = "Clear history")
-              Spacer(modifier = Modifier.width(4.dp))
-              Text("Clear")
-            }
-          }
-        }
-      }
-
-      if (history.isEmpty()) {
-        item {
-          EmptyOrErrorState(
-            icon = Icons.Default.History,
-            title = "No Battery Logs Recorded Yet",
-            description = "Tap 'Log Snapshot' or keep monitoring while battery state changes.",
-          )
-        }
-      } else {
-        items(history.take(30), key = { it.id }) { entry ->
-          NexusGlassCard {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically,
-            ) {
-              Column {
-                Text(
-                  text = "${entry.percentage}% • ${entry.statusLabel}",
-                  style = NexusTextStyles.MonoMetricSmall,
-                  color = if (entry.isCharging) colors.nominal else colors.textPrimary,
-                )
-                Text(
-                  text = "${Formatters.formatDateTime(entry.timestampMs)} • ${entry.chargeSource}",
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = colors.textSecondary,
-                )
-              }
-              Column(horizontalAlignment = Alignment.End) {
-                Text(
-                  text = entry.temperatureCelsius?.let { String.format(Locale.US, "%.1f °C", it) } ?: "N/A",
-                  style = MaterialTheme.typography.labelMedium,
-                  color = colors.textPrimary,
-                )
-                Text(
-                  text = entry.voltageVolts?.let { String.format(Locale.US, "%.2f V", it) } ?: "N/A",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = colors.textMuted,
-                )
-              }
+              Icon(Icons.Default.DeleteOutline, contentDescription = null)
+              Spacer(modifier = Modifier.width(6.dp))
+              Text("Clear Charging Log")
             }
           }
         }

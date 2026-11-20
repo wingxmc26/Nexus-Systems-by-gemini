@@ -7,42 +7,36 @@ enum class AccentPalette(
   val displayName: String,
   val primary: Color,
   val secondary: Color,
-  val glow: Color,
 ) {
   CRIMSON_RED(
     id = "crimson_red",
-    displayName = "Crimson Pulse",
+    displayName = "Nexus Red",
     primary = Color(0xFFE11D48),
-    secondary = Color(0xFFFF4D6D),
-    glow = Color(0x33E11D48),
+    secondary = Color(0xFFF43F5E),
   ),
-  CYBER_CYAN(
-    id = "cyber_cyan",
-    displayName = "Cyber Cyan",
-    primary = Color(0xFF06B6D4),
-    secondary = Color(0xFF22D3EE),
-    glow = Color(0x3306B6D4),
+  CORAL_RED(
+    id = "coral_red",
+    displayName = "Crimson",
+    primary = Color(0xFFDC2626),
+    secondary = Color(0xFFEF4444),
   ),
-  AMBER_CORE(
-    id = "amber_core",
-    displayName = "Amber Core",
-    primary = Color(0xFFF59E0B),
-    secondary = Color(0xFFFBBF24),
-    glow = Color(0x33F59E0B),
+  SLATE_BLUE(
+    id = "slate_blue",
+    displayName = "Steel Blue",
+    primary = Color(0xFF3B82F6),
+    secondary = Color(0xFF60A5FA),
   ),
-  EMERALD_MATRIX(
-    id = "emerald_matrix",
-    displayName = "Emerald Matrix",
+  EMERALD(
+    id = "emerald",
+    displayName = "Emerald",
     primary = Color(0xFF10B981),
     secondary = Color(0xFF34D399),
-    glow = Color(0x3310B981),
   ),
-  ELECTRIC_VIOLET(
-    id = "electric_violet",
-    displayName = "Electric Violet",
-    primary = Color(0xFF8B5CF6),
-    secondary = Color(0xFFA78BFA),
-    glow = Color(0x338B5CF6),
+  AMBER(
+    id = "amber",
+    displayName = "Amber",
+    primary = Color(0xFFF59E0B),
+    secondary = Color(0xFFFBBF24),
   );
 
   companion object {
@@ -53,13 +47,13 @@ enum class AccentPalette(
 
 object NexusPalette {
   val AmoledBlack = Color(0xFF000000)
-  val MatteObsidian = Color(0xFF090B10)
-  val CardSurface = Color(0xFF0F1219)
-  val CardSurfaceAmoled = Color(0xFF080A0F)
-  val ElevatedSurface = Color(0xFF161B26)
-  val GlassHighlight = Color(0x14FFFFFF)
-  val GlassBorder = Color(0x1FFFFFFF)
-  val TextPrimary = Color(0xFFF3F4F6)
+  val MatteSurface = Color(0xFF0B0D12)
+  val CardSurface = Color(0xFF101218)
+  val CardSurfaceAmoled = Color(0xFF0A0B0E)
+  val ElevatedSurface = Color(0xFF161922)
+  val SubtleBorder = Color(0x18FFFFFF)
+  val AccentBorder = Color(0x4DE11D48)
+  val TextPrimary = Color(0xFFFFFFFF)
   val TextSecondary = Color(0xFF9CA3AF)
   val TextMuted = Color(0xFF6B7280)
 

@@ -1,6 +1,6 @@
 {
-  "name": "Nexus System",
-  "description": "Advanced offline Android system diagnostics and hardware telemetry utility.",
+  "name": "NEXUS SYSTEM",
+  "description": "Offline Android system utility with battery tracking, RAM tools, live video wallpaper, activity launcher, home widgets, and storage cleanup.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

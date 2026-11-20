@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,14 +17,26 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material.icons.filled.DesignServices
+import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Monitor
-import androidx.compose.material.icons.filled.NetworkCheck
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.RocketLaunch
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.SettingsApplications
-import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.filled.Wallpaper
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.ui.components.NexusGlassCard
 import com.example.ui.components.NexusModuleHeader
@@ -46,8 +58,12 @@ private data class UtilityEntry(
   val title: String,
   val description: String,
   val icon: ImageVector,
-  val tag: String,
   val testTag: String,
+)
+
+private data class UtilityCategoryGroup(
+  val header: String,
+  val entries: List<UtilityEntry>,
 )
 
 @Composable
@@ -56,15 +72,52 @@ fun UtilitiesHubScreen(
   contentPadding: PaddingValues,
 ) {
   val colors = NexusThemeExtras.colors
-  val utilities = listOf(
-    UtilityEntry(NexusRoutes.STORAGE, "Storage Analyzer", "Volume metrics, SAF folder scanner, large file finder", Icons.Default.Storage, "SAF", "hub_storage"),
-    UtilityEntry(NexusRoutes.NETWORK, "Network Monitor", "Wi-Fi link, IPv4/IPv6, TrafficStats & offline checks", Icons.Default.NetworkCheck, "OFFLINE", "hub_network"),
-    UtilityEntry(NexusRoutes.SENSORS, "Sensor Lab", "Live waveforms, compass, tilt level & availability", Icons.Default.Sensors, "LIVE", "hub_sensors"),
-    UtilityEntry(NexusRoutes.DISPLAY, "Display Tester", "Dead pixels, grayscale banding & multi-touch", Icons.Default.Monitor, "TEST", "hub_display"),
-    UtilityEntry(NexusRoutes.AUDIO, "Audio Diagnostics", "Speaker frequency test & microphone VU meter", Icons.Default.GraphicEq, "PCM", "hub_audio"),
-    UtilityEntry(NexusRoutes.APPS, "App Inspector", "Launchable apps, APK size, permissions & launch", Icons.Default.Apps, "PKG", "hub_apps"),
-    UtilityEntry(NexusRoutes.SHORTCUTS, "System Shortcuts", "Official Android Settings intents", Icons.Default.SettingsApplications, "OS", "hub_shortcuts"),
-    UtilityEntry(NexusRoutes.CUSTOMIZE, "Dashboard Customization", "Card ordering, visibility, accent color & AMOLED", Icons.Default.Tune, "UI", "hub_customize"),
+  val groups = listOf(
+    UtilityCategoryGroup(
+      header = "Device",
+      entries = listOf(
+        UtilityEntry(NexusRoutes.BATTERY, "Battery & Charging", "Live current (mA), charging timer, sessions & history", Icons.Default.BatteryChargingFull, "hub_battery"),
+        UtilityEntry(NexusRoutes.RAM, "RAM Manager", "Live memory pressure, processes & app cache/settings", Icons.Default.Memory, "hub_ram"),
+        UtilityEntry(NexusRoutes.HARDWARE, "Device Information", "Manufacturer, Android version, processor, GPU & screen specs", Icons.Default.PhoneAndroid, "hub_hardware"),
+        UtilityEntry(NexusRoutes.SHORTCUTS, "Quick System Controls", "Direct brightness, timeout & rotate plus settings shortcuts", Icons.Default.SettingsApplications, "hub_shortcuts"),
+      ),
+    ),
+    UtilityCategoryGroup(
+      header = "Customization",
+      entries = listOf(
+        UtilityEntry(NexusRoutes.WALLPAPER, "Live Wallpaper Studio", "Video, image & GIF library with crop, speed & apply", Icons.Default.Wallpaper, "hub_wallpaper"),
+        UtilityEntry(NexusRoutes.LAUNCHER, "Shortcut Studio", "Custom app icons, shapes, activity inspection & pinning", Icons.Default.RocketLaunch, "hub_launcher"),
+        UtilityEntry(NexusRoutes.WIDGET_STUDIO, "Widget Studio", "Visual drag canvas, HTML/CSS/JS widgets & home pinning", Icons.Default.DesignServices, "hub_widget_studio"),
+        UtilityEntry(NexusRoutes.DEPTH_CLOCK, "Depth Clock Studio", "Digital/Analog layered clock widget with custom art", Icons.Default.AccessTime, "hub_depth_clock"),
+      ),
+    ),
+    UtilityCategoryGroup(
+      header = "Media",
+      entries = listOf(
+        UtilityEntry(NexusRoutes.MUSIC, "Music Player", "Offline Media3 audio player, playlists, queue & lyrics", Icons.Default.MusicNote, "hub_music"),
+        UtilityEntry(NexusRoutes.VIDEO, "Video Player", "Offline ExoPlayer with .SRT/.VTT subtitles, gestures & PiP", Icons.Default.VideoLibrary, "hub_video"),
+        UtilityEntry(NexusRoutes.SOUND_BOOSTER, "Sound Booster & EQ", "Hardware 10-band equalizer, bass boost, virtualizer & gain", Icons.Default.Equalizer, "hub_sound_booster"),
+      ),
+    ),
+    UtilityCategoryGroup(
+      header = "Management",
+      entries = listOf(
+        UtilityEntry(NexusRoutes.STORAGE, "Storage Manager", "SAF analyzer, duplicates & direct file/ZIP browser", Icons.Default.FolderOpen, "hub_storage"),
+        UtilityEntry(NexusRoutes.APP_MANAGER, "Advanced App Manager", "Packages, permissions, APK sizes & optional usage stats", Icons.Default.Apps, "hub_app_manager"),
+        UtilityEntry(NexusRoutes.NOTIFICATIONS, "Notification Studio", "Local notification history, filters, pinning & dismiss", Icons.Default.Notifications, "hub_notifications"),
+      ),
+    ),
+    UtilityCategoryGroup(
+      header = "Tools",
+      entries = listOf(
+        UtilityEntry(NexusRoutes.RECORDER, "Screen Recorder Studio", "MP4 screen capture, screenshots & mic narration", Icons.Default.Videocam, "hub_recorder"),
+        UtilityEntry(NexusRoutes.SENSORS, "Sensor Lab", "Live waveforms, compass, tilt level & sensor availability", Icons.Default.Sensors, "hub_sensors"),
+        UtilityEntry(NexusRoutes.DISPLAY, "Display Tester", "Dead pixel check, RGB gradients & multi-touch test", Icons.Default.Monitor, "hub_display"),
+        UtilityEntry(NexusRoutes.WIDGETS, "Home Widgets", "Pin any of 7 system, clock, music & custom widgets", Icons.Default.Widgets, "hub_widgets"),
+        UtilityEntry(NexusRoutes.PERMISSIONS, "Permissions & Privacy Audit", "Inspect & manage optional capabilities in Settings", Icons.Default.Security, "hub_permissions"),
+        UtilityEntry(NexusRoutes.CUSTOMIZE, "Dashboard Customization", "Card ordering, visibility, accent color & AMOLED", Icons.Default.Tune, "hub_customize"),
+      ),
+    ),
   )
 
   Column(
@@ -73,12 +126,14 @@ fun UtilitiesHubScreen(
       .background(colors.background),
   ) {
     NexusModuleHeader(
-      title = "Diagnostic Suite",
-      subtitle = "HARDWARE LABS & SYSTEM UTILITIES",
+      title = "NEXUS Suite",
+      subtitle = "Device, Customization, Media, Management & Tools",
     )
 
     LazyColumn(
-      modifier = Modifier.fillMaxSize(),
+      modifier = Modifier
+        .fillMaxSize()
+        .testTag("utilities_hub_list"),
       contentPadding = PaddingValues(
         start = 16.dp,
         end = 16.dp,
@@ -87,39 +142,41 @@ fun UtilitiesHubScreen(
       ),
       verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-      item {
-        SectionHeader(title = "Labs & Tools", trailingText = "${utilities.size} UTILITIES")
-      }
-      items(utilities, key = { it.route }) { item ->
-        NexusGlassCard(
-          onClick = { onNavigate(item.route) },
-          testTag = item.testTag,
-        ) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+      groups.forEach { group ->
+        item(key = "header_${group.header}") {
+          SectionHeader(title = group.header, trailingText = "${group.entries.size} modules")
+        }
+        items(group.entries, key = { it.route }) { item ->
+          NexusGlassCard(
+            onClick = { onNavigate(item.route) },
+            testTag = item.testTag,
           ) {
-            Box(
-              modifier = Modifier
-                .size(42.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(colors.accent.copy(alpha = 0.14f)),
-              contentAlignment = Alignment.Center,
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              verticalAlignment = Alignment.CenterVertically,
             ) {
-              Icon(item.icon, contentDescription = null, tint = colors.accent)
+              Box(
+                modifier = Modifier
+                  .size(42.dp)
+                  .clip(RoundedCornerShape(12.dp))
+                  .background(colors.accent.copy(alpha = 0.14f)),
+                contentAlignment = Alignment.Center,
+              ) {
+                Icon(item.icon, contentDescription = null, tint = colors.accent)
+              }
+              Spacer(modifier = Modifier.width(14.dp))
+              Column(modifier = Modifier.weight(1f)) {
+                Text(item.title, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(item.description, style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
+              }
+              Spacer(modifier = Modifier.width(8.dp))
+              Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Open ${item.title}",
+                tint = colors.textSecondary,
+              )
             }
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-              Text(item.title, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
-              Spacer(modifier = Modifier.height(2.dp))
-              Text(item.description, style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-              imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-              contentDescription = "Open ${item.title}",
-              tint = colors.textSecondary,
-            )
           }
         }
       }

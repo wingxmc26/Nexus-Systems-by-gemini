@@ -1,12 +1,13 @@
 <resources>
-    <string name="app_name">Nexus System</string>
-    <string name="nexus_brand_title">NEXUS SYSTEM</string>
-    <string name="nexus_brand_subtitle">OFFLINE DIAGNOSTICS ENGINE</string>
-    <string name="nav_dashboard">Dashboard</string>
-    <string name="nav_telemetry">Telemetry</string>
-    <string name="nav_lab">Sensor Lab</string>
-    <string name="nav_system">System</string>
-    <string name="unavailable_label">Unavailable</string>
-    <string name="restricted_os_label">Restricted by Android OS</string>
-    <string name="offline_badge">100% OFFLINE</string>
+    <string name="app_name">NEXUS SYSTEM</string>
+    <string name="live_wallpaper_label">Nexus Live Wallpaper</string>
+    <string name="live_wallpaper_description">Play your selected video, image, or GIF wallpaper natively on Home and Lock screens.</string>
+    <string name="notification_listener_label">Nexus Notification History</string>
+    <string name="widget_battery_label">Nexus Battery &amp; Charging</string>
+    <string name="widget_system_label">Nexus System Status</string>
+    <string name="widget_device_label">Nexus Device Info</string>
+    <string name="widget_favorites_label">Nexus Favorite Shortcuts</string>
+    <string name="widget_custom_studio_label">Nexus Custom Studio Widget</string>
+    <string name="widget_depth_clock_label">Nexus Depth Clock</string>
+    <string name="widget_music_label">Nexus Music Player</string>
 </resources>

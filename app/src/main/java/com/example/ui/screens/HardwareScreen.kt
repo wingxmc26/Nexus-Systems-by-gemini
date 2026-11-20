@@ -63,8 +63,8 @@ fun HardwareScreen(
       .background(colors.background),
   ) {
     NexusModuleHeader(
-      title = "Hardware Monitor",
-      subtitle = "SOC, MEMORY, GPU & KERNEL PROBE",
+      title = "Device Information",
+      subtitle = "Hardware, Processor, GPU & OS Details",
       onBack = onBack,
       trailingContent = {
         IconButton(

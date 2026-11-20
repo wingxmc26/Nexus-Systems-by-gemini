@@ -1,5 +1,6 @@
 package com.example.ui.theme
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
@@ -7,7 +8,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
@@ -17,10 +17,8 @@ data class NexusExtendedColors(
   val cardSurface: Color,
   val elevatedSurface: Color,
   val glassBorder: Color,
-  val glassHighlight: Color,
   val accent: Color,
   val accentSecondary: Color,
-  val accentGlow: Color,
   val textPrimary: Color,
   val textSecondary: Color,
   val textMuted: Color,
@@ -36,11 +34,9 @@ val LocalNexusColors = staticCompositionLocalOf {
     background = NexusPalette.AmoledBlack,
     cardSurface = NexusPalette.CardSurfaceAmoled,
     elevatedSurface = NexusPalette.ElevatedSurface,
-    glassBorder = NexusPalette.GlassBorder,
-    glassHighlight = NexusPalette.GlassHighlight,
+    glassBorder = NexusPalette.SubtleBorder,
     accent = AccentPalette.CRIMSON_RED.primary,
     accentSecondary = AccentPalette.CRIMSON_RED.secondary,
-    accentGlow = AccentPalette.CRIMSON_RED.glow,
     textPrimary = NexusPalette.TextPrimary,
     textSecondary = NexusPalette.TextSecondary,
     textMuted = NexusPalette.TextMuted,
@@ -66,18 +62,16 @@ fun NexusTheme(
   amoledMode: Boolean = true,
   content: @Composable () -> Unit,
 ) {
-  val bg = if (amoledMode) NexusPalette.AmoledBlack else NexusPalette.MatteObsidian
+  val bg = if (amoledMode) NexusPalette.AmoledBlack else NexusPalette.MatteSurface
   val surface = if (amoledMode) NexusPalette.CardSurfaceAmoled else NexusPalette.CardSurface
 
   val extendedColors = NexusExtendedColors(
     background = bg,
     cardSurface = surface,
     elevatedSurface = NexusPalette.ElevatedSurface,
-    glassBorder = NexusPalette.GlassBorder,
-    glassHighlight = NexusPalette.GlassHighlight,
+    glassBorder = NexusPalette.SubtleBorder,
     accent = accentPalette.primary,
     accentSecondary = accentPalette.secondary,
-    accentGlow = accentPalette.glow,
     textPrimary = NexusPalette.TextPrimary,
     textSecondary = NexusPalette.TextSecondary,
     textMuted = NexusPalette.TextMuted,
@@ -91,17 +85,17 @@ fun NexusTheme(
   val colorScheme = darkColorScheme(
     primary = accentPalette.primary,
     onPrimary = Color.White,
-    primaryContainer = accentPalette.primary.copy(alpha = 0.2f),
+    primaryContainer = accentPalette.primary.copy(alpha = 0.16f),
     onPrimaryContainer = accentPalette.secondary,
     secondary = accentPalette.secondary,
-    onSecondary = Color.Black,
+    onSecondary = Color.White,
     background = bg,
     onBackground = NexusPalette.TextPrimary,
     surface = surface,
     onSurface = NexusPalette.TextPrimary,
     surfaceVariant = NexusPalette.ElevatedSurface,
     onSurfaceVariant = NexusPalette.TextSecondary,
-    outline = NexusPalette.GlassBorder,
+    outline = NexusPalette.SubtleBorder,
     error = NexusPalette.StatusCritical,
     onError = Color.White,
   )

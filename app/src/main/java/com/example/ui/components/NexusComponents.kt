@@ -1,13 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -44,7 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -68,36 +61,18 @@ fun NexusGlassCard(
   content: @Composable ColumnScope.() -> Unit,
 ) {
   val colors = NexusThemeExtras.colors
-  val shape = RoundedCornerShape(18.dp)
-  val borderBrush = if (accentHighlight) {
-    Brush.linearGradient(
-      colors = listOf(
-        colors.accent.copy(alpha = 0.55f),
-        colors.glassBorder,
-        colors.accent.copy(alpha = 0.25f),
-      )
-    )
+  val shape = RoundedCornerShape(16.dp)
+  val borderColor = if (accentHighlight) {
+    colors.accent.copy(alpha = 0.42f)
   } else {
-    Brush.linearGradient(
-      colors = listOf(
-        Color.White.copy(alpha = 0.14f),
-        Color.White.copy(alpha = 0.04f),
-      )
-    )
+    colors.glassBorder
   }
 
   val baseModifier = modifier
     .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
     .clip(shape)
-    .background(
-      brush = Brush.verticalGradient(
-        colors = listOf(
-          colors.cardSurface.copy(alpha = 0.94f),
-          colors.elevatedSurface.copy(alpha = if (colors.isAmoled) 0.55f else 0.78f),
-        )
-      )
-    )
-    .border(BorderStroke(1.dp, borderBrush), shape)
+    .background(colors.cardSurface)
+    .border(BorderStroke(1.dp, borderColor), shape)
     .then(
       if (onClick != null) {
         Modifier
@@ -122,16 +97,6 @@ fun NexusModuleHeader(
   trailingContent: (@Composable () -> Unit)? = null,
 ) {
   val colors = NexusThemeExtras.colors
-  val pulseTransition = rememberInfiniteTransition(label = "offline_pulse")
-  val pulseAlpha by pulseTransition.animateFloat(
-    initialValue = 0.45f,
-    targetValue = 1.0f,
-    animationSpec = infiniteRepeatable(
-      animation = tween(1400, easing = FastOutSlowInEasing),
-      repeatMode = RepeatMode.Reverse,
-    ),
-    label = "pulse_alpha",
-  )
 
   Row(
     modifier = Modifier
@@ -146,7 +111,8 @@ fun NexusModuleHeader(
         modifier = Modifier
           .size(48.dp)
           .clip(CircleShape)
-          .background(colors.elevatedSurface.copy(alpha = 0.7f))
+          .background(colors.cardSurface)
+          .border(1.dp, colors.glassBorder, CircleShape)
           .testTag("back_button"),
       ) {
         Icon(
@@ -166,24 +132,13 @@ fun NexusModuleHeader(
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
       )
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-      ) {
-        Box(
-          modifier = Modifier
-            .size(7.dp)
-            .clip(CircleShape)
-            .background(colors.accent.copy(alpha = pulseAlpha))
-        )
-        Text(
-          text = subtitle,
-          style = MaterialTheme.typography.labelMedium,
-          color = colors.textSecondary,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-        )
-      }
+      Text(
+        text = subtitle,
+        style = MaterialTheme.typography.bodyMedium,
+        color = colors.textSecondary,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
     }
 
     if (trailingContent != null) {
@@ -203,7 +158,7 @@ fun SectionHeader(
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .padding(vertical = 4.dp),
+      .padding(vertical = 2.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     if (icon != null) {
@@ -216,7 +171,7 @@ fun SectionHeader(
       Spacer(modifier = Modifier.width(8.dp))
     }
     Text(
-      text = title.uppercase(),
+      text = title,
       style = MaterialTheme.typography.labelLarge,
       color = colors.textSecondary,
       modifier = Modifier.weight(1f),
@@ -225,7 +180,7 @@ fun SectionHeader(
       Text(
         text = trailingText,
         style = MaterialTheme.typography.labelMedium,
-        color = colors.accentSecondary,
+        color = colors.textSecondary,
       )
     }
   }
@@ -239,7 +194,7 @@ fun StatusPill(
   Surface(
     color = color.copy(alpha = 0.14f),
     shape = RoundedCornerShape(999.dp),
-    border = BorderStroke(1.dp, color.copy(alpha = 0.4f)),
+    border = BorderStroke(1.dp, color.copy(alpha = 0.35f)),
   ) {
     Text(
       text = text,
@@ -274,7 +229,7 @@ fun MetricKeyValueRow(
     Spacer(modifier = Modifier.width(12.dp))
     Text(
       text = value,
-      style = NexusTextStyles.MonoMetricSmall,
+      style = NexusTextStyles.MetricSmall,
       color = valueColor ?: colors.textPrimary,
       maxLines = 2,
       overflow = TextOverflow.Ellipsis,
@@ -309,14 +264,14 @@ fun TelemetryArcGauge(
   centerValue: String,
   centerLabel: String,
   modifier: Modifier = Modifier,
-  size: Dp = 96.dp,
-  strokeWidth: Dp = 9.dp,
+  size: Dp = 92.dp,
+  strokeWidth: Dp = 8.dp,
   gaugeColor: Color = NexusThemeExtras.colors.accent,
 ) {
   val colors = NexusThemeExtras.colors
   val animatedProgress by animateFloatAsState(
     targetValue = progress.coerceIn(0f, 1f),
-    animationSpec = spring(dampingRatio = 0.8f, stiffness = 220f),
+    animationSpec = tween(durationMillis = 350),
     label = "arc_progress",
   )
   val animatedColor by animateColorAsState(targetValue = gaugeColor, label = "arc_color")
@@ -339,9 +294,7 @@ fun TelemetryArcGauge(
         style = Stroke(width = strokePx, cap = StrokeCap.Round),
       )
       drawArc(
-        brush = Brush.sweepGradient(
-          colors = listOf(animatedColor.copy(alpha = 0.65f), animatedColor, colors.accentSecondary),
-        ),
+        color = animatedColor,
         startAngle = 135f,
         sweepAngle = 270f * animatedProgress,
         useCenter = false,
@@ -353,13 +306,15 @@ fun TelemetryArcGauge(
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
       Text(
         text = centerValue,
-        style = NexusTextStyles.MonoMetricMedium,
+        style = NexusTextStyles.MetricMedium,
         color = colors.textPrimary,
       )
       Text(
         text = centerLabel,
         style = MaterialTheme.typography.labelSmall,
         color = colors.textSecondary,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
       )
     }
   }
@@ -376,10 +331,10 @@ fun TelemetrySparkline(
   Canvas(
     modifier = modifier
       .fillMaxWidth()
-      .height(64.dp)
+      .height(56.dp)
       .clip(RoundedCornerShape(10.dp))
-      .background(colors.background.copy(alpha = 0.55f))
-      .padding(horizontal = 6.dp, vertical = 8.dp),
+      .background(colors.elevatedSurface.copy(alpha = 0.55f))
+      .padding(horizontal = 8.dp, vertical = 8.dp),
   ) {
     if (samples.size < 2) return@Canvas
     val minVal = fixedRange?.first ?: samples.minOrNull() ?: 0f
@@ -388,40 +343,24 @@ fun TelemetrySparkline(
 
     val stepX = size.width / (samples.size - 1).coerceAtLeast(1)
     val path = Path()
-    val fillPath = Path()
 
     samples.forEachIndexed { idx, v ->
       val x = idx * stepX
       val norm = ((v - minVal) / span).coerceIn(0f, 1f)
       val y = size.height - (norm * size.height)
-      if (idx == 0) {
-        path.moveTo(x, y)
-        fillPath.moveTo(x, size.height)
-        fillPath.lineTo(x, y)
-      } else {
-        path.lineTo(x, y)
-        fillPath.lineTo(x, y)
-      }
+      if (idx == 0) path.moveTo(x, y) else path.lineTo(x, y)
     }
-    fillPath.lineTo((samples.size - 1) * stepX, size.height)
-    fillPath.close()
 
-    drawPath(
-      path = fillPath,
-      brush = Brush.verticalGradient(
-        colors = listOf(lineColor.copy(alpha = 0.28f), Color.Transparent),
-      ),
-    )
     drawPath(
       path = path,
       color = lineColor,
-      style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round),
+      style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round),
     )
   }
 }
 
 @Composable
-fun LoadingTelemetryState(message: String = "Probing system telemetry...") {
+fun LoadingTelemetryState(message: String = "Loading system information...") {
   val colors = NexusThemeExtras.colors
   Box(
     modifier = Modifier
@@ -433,7 +372,7 @@ fun LoadingTelemetryState(message: String = "Probing system telemetry...") {
       CircularProgressIndicator(
         color = colors.accent,
         strokeWidth = 3.dp,
-        modifier = Modifier.size(36.dp),
+        modifier = Modifier.size(32.dp),
       )
       Spacer(modifier = Modifier.height(12.dp))
       Text(
@@ -463,7 +402,7 @@ fun EmptyOrErrorState(
         imageVector = icon,
         contentDescription = null,
         tint = colors.accent,
-        modifier = Modifier.size(36.dp),
+        modifier = Modifier.size(32.dp),
       )
       Spacer(modifier = Modifier.height(8.dp))
       Text(

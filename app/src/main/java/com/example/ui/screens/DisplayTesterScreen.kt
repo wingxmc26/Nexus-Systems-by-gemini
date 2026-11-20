@@ -107,7 +107,7 @@ fun DisplayTesterScreen(
         }
         Text(
           text = "${colorIndex + 1} / ${viewModel.deadPixelColors.size}",
-          style = NexusTextStyles.MonoMetricSmall,
+          style = NexusTextStyles.MetricSmall,
           color = overlayTextColor.copy(alpha = 0.5f),
           modifier = Modifier
             .align(Alignment.BottomCenter)
@@ -400,7 +400,7 @@ private fun MultiTouchTestOverlay(onExit: () -> Unit) {
         ) {
           Text(
             text = "Active Touches: ${activePointers.size}",
-            style = NexusTextStyles.MonoMetricSmall,
+            style = NexusTextStyles.MetricSmall,
             color = colors.accentSecondary,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
           )
@@ -411,7 +411,7 @@ private fun MultiTouchTestOverlay(onExit: () -> Unit) {
       activePointers.values.forEach { pt ->
         Text(
           text = "ID ${pt.id}: (${pt.position.x.toInt()}, ${pt.position.y.toInt()}) • P=${String.format(Locale.US, "%.2f", pt.pressure)}",
-          style = NexusTextStyles.MonoMetricSmall,
+          style = NexusTextStyles.MetricSmall,
           color = Color.White.copy(alpha = 0.85f),
         )
       }

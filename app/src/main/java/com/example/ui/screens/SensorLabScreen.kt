@@ -231,7 +231,7 @@ fun SensorLabScreen(
               }.joinToString("  |  ")
               Text(
                 text = "$formatted ${sensorInfo.coreType.unit}",
-                style = NexusTextStyles.MonoMetricSmall,
+                style = NexusTextStyles.MetricSmall,
                 color = colors.accentSecondary,
               )
             } else {
@@ -285,7 +285,7 @@ private fun TiltLevelIndicator(x: Float, y: Float) {
       Text("2D Accelerometer Tilt", style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
       Text(
         text = "X: ${String.format(Locale.US, "%.2f", x)} m/s²  Y: ${String.format(Locale.US, "%.2f", y)} m/s²",
-        style = NexusTextStyles.MonoMetricSmall,
+        style = NexusTextStyles.MetricSmall,
         color = colors.textSecondary,
       )
     }
