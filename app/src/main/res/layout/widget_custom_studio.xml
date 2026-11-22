@@ -13,6 +13,71 @@
         android:contentDescription="Custom Studio Widget"
         android:scaleType="fitCenter" />
 
+    <ViewFlipper
+        android:id="@+id/widget_custom_flipper"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:autoStart="true"
+        android:flipInterval="180"
+        android:visibility="gone" />
+
+    <!-- Native launcher-ticked TextClock overlays for Visual Clock & Date widgets -->
+    <TextClock
+        android:id="@+id/widget_custom_live_clock_bold"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:ellipsize="end"
+        android:format12Hour="HH:mm"
+        android:format24Hour="HH:mm"
+        android:gravity="center_vertical|start"
+        android:maxLines="1"
+        android:textColor="#FFFFFFFF"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <TextClock
+        android:id="@+id/widget_custom_live_clock_reg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:ellipsize="end"
+        android:format12Hour="HH:mm"
+        android:format24Hour="HH:mm"
+        android:gravity="center_vertical|start"
+        android:maxLines="1"
+        android:textColor="#FFFFFFFF"
+        android:textSize="28sp"
+        android:textStyle="normal"
+        android:visibility="gone" />
+
+    <TextClock
+        android:id="@+id/widget_custom_live_date_bold"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:ellipsize="end"
+        android:format12Hour="EEE, MMM dd"
+        android:format24Hour="EEE, MMM dd"
+        android:gravity="center_vertical|start"
+        android:maxLines="1"
+        android:textColor="#FFFFFFFF"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <TextClock
+        android:id="@+id/widget_custom_live_date_reg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:ellipsize="end"
+        android:format12Hour="EEE, MMM dd"
+        android:format24Hour="EEE, MMM dd"
+        android:gravity="center_vertical|start"
+        android:maxLines="1"
+        android:textColor="#FFFFFFFF"
+        android:textSize="14sp"
+        android:textStyle="normal"
+        android:visibility="gone" />
+
     <LinearLayout
         android:id="@+id/widget_custom_placeholder"
         android:layout_width="match_parent"

@@ -28,6 +28,8 @@ object WidgetClockSerializer {
       put("heightDp", spec.targetHeightDp)
       put("padDp", spec.containerPaddingDp)
       put("refreshMin", spec.refreshIntervalMinutes)
+      put("anim", spec.enableAnimation)
+      put("animMs", spec.animationFrameMs)
       val arr = JSONArray()
       spec.elements.forEach { el ->
         arr.put(
@@ -105,7 +107,9 @@ object WidgetClockSerializer {
         targetWidthDp = root.optInt("widthDp", 328).coerceIn(100, 520),
         targetHeightDp = root.optInt("heightDp", 160).coerceIn(60, 560),
         containerPaddingDp = root.optInt("padDp", 12).coerceIn(0, 36),
-        refreshIntervalMinutes = root.optInt("refreshMin", 15).coerceIn(0, 120),
+        refreshIntervalMinutes = root.optInt("refreshMin", 1).coerceIn(0, 120),
+        enableAnimation = root.optBoolean("anim", false),
+        animationFrameMs = root.optInt("animMs", 180).coerceIn(80, 1000),
         elements = list,
       )
     }.getOrElse { defaultTelemetryVisualSpec() }

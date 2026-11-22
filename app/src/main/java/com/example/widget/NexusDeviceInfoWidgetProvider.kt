@@ -20,11 +20,17 @@ import kotlinx.coroutines.launch
 
 class NexusDeviceInfoWidgetProvider : AppWidgetProvider() {
 
+  override fun onEnabled(context: Context) {
+    super.onEnabled(context)
+    NexusWidgetLiveTicker.ensureRegistered(context.applicationContext)
+  }
+
   override fun onUpdate(
     context: Context,
     appWidgetManager: AppWidgetManager,
     appWidgetIds: IntArray,
   ) {
+    NexusWidgetLiveTicker.ensureRegistered(context.applicationContext)
     val pending = goAsync()
     CoroutineScope(Dispatchers.IO).launch {
       try {
@@ -52,11 +58,17 @@ class NexusDeviceInfoWidgetProvider : AppWidgetProvider() {
       appWidgetManager: AppWidgetManager,
       appWidgetIds: IntArray,
     ) {
-      val title = "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}"
-      val uptime = Formatters.formatDuration(SystemClock.elapsedRealtime())
-      val subtitle = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}) • Uptime $uptime"
-
       val container = runCatching { NexusContainer.get(context) }.getOrNull()
+      val devState = runCatching { container?.widgetDataHub?.deviceProvider?.fetch(context) }.getOrNull()
+      val dev = (devState as? com.example.widget.engine.WidgetDataState.Available)?.data
+      val title = if (dev != null) {
+        "${dev.manufacturer.replaceFirstChar { it.uppercase() }} ${dev.model}"
+      } else {
+        "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}"
+      }
+      val uptime = Formatters.formatDuration(dev?.uptimeMs ?: SystemClock.elapsedRealtime())
+      val subtitle = "Android ${dev?.androidVersion ?: Build.VERSION.RELEASE} (API ${dev?.sdkInt ?: Build.VERSION.SDK_INT}) • Uptime $uptime"
+
       val style = runCatching {
         container?.preferencesRepository?.getBuiltInWidgetStyle(WIDGET_STYLE_KEY)
       }.getOrNull() ?: BuiltInWidgetStyleConfig()

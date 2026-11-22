@@ -4,14 +4,21 @@ import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.net.Uri
-import android.webkit.JavascriptInterface
+import android.webkit.ConsoleMessage
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.example.di.NexusContainer
+import com.example.widget.engine.DiagnosticSeverity
+import com.example.widget.engine.WidgetCapability
+import com.example.widget.engine.WidgetDiagnosticCenter
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -58,11 +65,13 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -109,6 +118,8 @@ fun VisualWidgetEditorSection(
   onSetCustomSize: (Int, Int) -> Unit,
   onSetPadding: (Int) -> Unit,
   onSetRefreshInterval: (Int) -> Unit,
+  onToggleAnimation: (Boolean) -> Unit,
+  onSetAnimationSpeed: (Int) -> Unit,
 ) {
   val colors = NexusThemeExtras.colors
   val density = LocalDensity.current
@@ -202,24 +213,46 @@ fun VisualWidgetEditorSection(
                 },
               ) {
                 if (el.kind == VisualElementKind.IMAGE) {
-                  val bmp = remember(el.imageUriOrPath) {
-                    el.imageUriOrPath?.takeIf { File(it).exists() }?.let {
-                      NexusBitmapUtils.decodeSampledBitmap(it, 480, 480)
-                    }
+                  val gifSeq = remember(el.imageUriOrPath) {
+                    val p = el.imageUriOrPath
+                    if (com.example.widget.AnimatedWidgetEngine.isAnimatedGifFile(p)) {
+                      com.example.widget.AnimatedWidgetEngine.extractGifFrames(p!!, maxFrames = 10, maxSidePx = 360)
+                    } else null
                   }
-                  if (bmp != null) {
+                  var animIdx by remember(gifSeq) { mutableIntStateOf(0) }
+                  if (gifSeq != null && gifSeq.frames.size >= 2) {
+                    LaunchedEffect(gifSeq, spec.animationFrameMs) {
+                      while (true) {
+                        delay(spec.animationFrameMs.coerceIn(80, 600).toLong())
+                        animIdx = (animIdx + 1) % gifSeq.frames.size
+                      }
+                    }
                     Image(
-                      bitmap = bmp.asImageBitmap(),
-                      contentDescription = "Widget Image Element",
+                      bitmap = gifSeq.frames[animIdx % gifSeq.frames.size].asImageBitmap(),
+                      contentDescription = "Animated GIF Widget Element",
                       contentScale = ContentScale.Crop,
                       modifier = Modifier.fillMaxSize(),
                     )
                   } else {
-                    Text(
-                      text = "Tap Pick Image",
-                      color = Color(el.textColorArgb),
-                      fontSize = 11.sp,
-                    )
+                    val bmp = remember(el.imageUriOrPath) {
+                      el.imageUriOrPath?.takeIf { File(it).exists() }?.let {
+                        NexusBitmapUtils.decodeSampledBitmap(it, 480, 480)
+                      }
+                    }
+                    if (bmp != null) {
+                      Image(
+                        bitmap = bmp.asImageBitmap(),
+                        contentDescription = "Widget Image Element",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                      )
+                    } else {
+                      Text(
+                        text = "Tap Pick Image / GIF",
+                        color = Color(el.textColorArgb),
+                        fontSize = 11.sp,
+                      )
+                    }
                   }
                 } else {
                   Text(
@@ -259,10 +292,15 @@ fun VisualWidgetEditorSection(
         }
       }
       Spacer(modifier = Modifier.height(6.dp))
+      val isAutoVisual = spec.sizePresetName.equals(WidgetSizePreset.AUTO.name, ignoreCase = true)
       Text(
-        "Width: ${spec.targetWidthDp} dp • Height: ${spec.targetHeightDp} dp",
+        text = if (isAutoVisual) {
+          "Auto-Fit Active • Scales dynamically to launcher slot (Canvas: ${spec.targetWidthDp}×${spec.targetHeightDp} dp)"
+        } else {
+          "Width: ${spec.targetWidthDp} dp • Height: ${spec.targetHeightDp} dp"
+        },
         style = MaterialTheme.typography.labelSmall,
-        color = colors.textSecondary,
+        color = if (isAutoVisual) colors.accentSecondary else colors.textSecondary,
       )
       Slider(
         value = spec.targetWidthDp.toFloat(),
@@ -454,6 +492,34 @@ fun VisualWidgetEditorSection(
         valueRange = 0f..36f,
         colors = SliderDefaults.colors(thumbColor = colors.accent, activeTrackColor = colors.accent),
       )
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Column(modifier = Modifier.weight(1f)) {
+          Text("Animated GIF Frame Playback", color = colors.textPrimary)
+          Text("Plays animated GIFs natively on Home Screen", style = MaterialTheme.typography.labelSmall, color = colors.textSecondary)
+        }
+        Switch(
+          checked = spec.enableAnimation || com.example.widget.AnimatedWidgetEngine.hasAnyAnimatedImage(spec),
+          onCheckedChange = onToggleAnimation,
+        )
+      }
+      if (spec.enableAnimation || com.example.widget.AnimatedWidgetEngine.hasAnyAnimatedImage(spec)) {
+        Row(
+          modifier = Modifier.horizontalScroll(rememberScrollState()),
+          horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+          listOf(110 to "Smooth 110ms", 180 to "Balanced 180ms", 280 to "Saver 280ms").forEach { (ms, lbl) ->
+            FilterChip(
+              selected = spec.animationFrameMs == ms,
+              onClick = { onSetAnimationSpeed(ms) },
+              label = { Text(lbl) },
+            )
+          }
+        }
+      }
     }
   }
 }
@@ -467,6 +533,8 @@ fun HtmlWidgetEditorSection(
   spec: VisualWidgetSpec,
   importedAssetNames: List<String>,
   onToggleTransparent: (Boolean) -> Unit,
+  onToggleAnimation: (Boolean) -> Unit,
+  onSetAnimationSpeed: (Int) -> Unit,
   onSelectPreset: (WidgetSizePreset) -> Unit,
   onSetCustomSize: (Int, Int) -> Unit,
   onSetRefreshInterval: (Int) -> Unit,
@@ -485,7 +553,32 @@ fun HtmlWidgetEditorSection(
     File(context.filesDir, NexusWidgetJsBridge.ASSETS_DIR).apply { if (!exists()) mkdirs() }
   }
   var codeTab by remember { mutableIntStateOf(0) } // 0=HTML, 1=CSS, 2=JS
+  var showBridgeDocs by remember { mutableStateOf(false) }
   var pendingFileCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
+  var liveWebViewRef by remember { mutableStateOf<WebView?>(null) }
+  val coordinator = remember(context) { NexusContainer.get(context).widgetDataHub.permissionCoordinator }
+
+  val runtimePermissionLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestMultiplePermissions(),
+  ) { _ ->
+    liveWebViewRef?.evaluateJavascript(
+      "if(window.NexusRuntime){window.NexusRuntime.dispatchUpdate({permissionChanged:true});}",
+      null,
+    )
+  }
+
+  val handleCapabilityRequest: (WidgetCapability) -> Unit = remember(coordinator, context) {
+    { cap ->
+      val perms = coordinator.requiredRuntimePermissions(cap)
+      if (perms.isNotEmpty()) {
+        runtimePermissionLauncher.launch(perms.toTypedArray())
+      } else {
+        coordinator.buildActionableIntent(cap)?.let { intent ->
+          runCatching { context.startActivity(intent) }
+        }
+      }
+    }
+  }
 
   val webFileChooserLauncher = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.OpenMultipleDocuments(),
@@ -504,6 +597,7 @@ fun HtmlWidgetEditorSection(
   }
 
   val isTransparent = spec.htmlTransparent
+  val isAutoSize = spec.sizePresetName.equals(WidgetSizePreset.AUTO.name, ignoreCase = true)
   val aspectRatio = (spec.targetWidthDp.toFloat() / spec.targetHeightDp.coerceAtLeast(56).toFloat())
     .coerceIn(0.45f, 3.6f)
 
@@ -513,14 +607,39 @@ fun HtmlWidgetEditorSection(
     "\nhtml, body { margin: 0 !important; }"
   }
 
-  val composedDoc = remember(htmlCode, cssCode, jsCode, isTransparent, spec.targetWidthDp, spec.targetHeightDp) {
-    """<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=${spec.targetWidthDp},initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<style>* { box-sizing: border-box; } $cssCode$transparentOverrideCss</style></head>
-<body>$htmlCode
-<script>$jsCode</script>
-</body></html>"""
+  val composedDoc = remember(htmlCode, cssCode, jsCode, isTransparent, isAutoSize, spec.targetWidthDp, spec.targetHeightDp, importedAssetNames) {
+    val cleanHtml = htmlCode.trim()
+    val looksFullHtmlDoc = cleanHtml.contains("<html", ignoreCase = true) ||
+      cleanHtml.contains("<!doctype", ignoreCase = true)
+    val mergedCss = if (looksFullHtmlDoc) "" else "$cssCode$transparentOverrideCss"
+    NexusWidgetJsBridge.composeHtmlDocument(
+      rawHtml = htmlCode,
+      rawCss = mergedCss,
+      rawJs = jsCode,
+      widthDp = spec.targetWidthDp,
+      heightDp = spec.targetHeightDp,
+      transparentBg = isTransparent,
+      assetsDir = assetsDir,
+      isAutoSize = isAutoSize,
+    )
+  }
+
+  val diagnostics by WidgetDiagnosticCenter.entries.collectAsStateWithLifecycle()
+  val previewErrors = remember(diagnostics) {
+    diagnostics.filter {
+      it.category in setOf("HTML_PREVIEW", "HTML_JS", "HTML_RENDER") &&
+        it.severity == DiagnosticSeverity.ERROR
+    }.takeLast(3)
+  }
+
+  LaunchedEffect(liveWebViewRef) {
+    while (isActive) {
+      delay(3000L)
+      liveWebViewRef?.evaluateJavascript(
+        "if(window.NexusRuntime&&typeof NexusWidget!=='undefined'){try{window.NexusRuntime.dispatchUpdate(JSON.parse(NexusWidget.getAllTelemetryJson()));}catch(e){}}",
+        null,
+      )
+    }
   }
 
   Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -555,10 +674,27 @@ fun HtmlWidgetEditorSection(
               settings.useWideViewPort = true
               settings.loadWithOverviewMode = true
               settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-              val bridge = NexusWidgetJsBridge(ctx, spec.targetWidthDp, spec.targetHeightDp)
+              val bridge = NexusWidgetJsBridge(
+                context = ctx,
+                widthDp = spec.targetWidthDp,
+                heightDp = spec.targetHeightDp,
+                onPermissionRequested = handleCapabilityRequest,
+              )
               addJavascriptInterface(bridge, "NexusBridge")
               addJavascriptInterface(bridge, "NexusWidget")
               webChromeClient = object : WebChromeClient() {
+                override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
+                  if (consoleMessage != null && consoleMessage.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+                    WidgetDiagnosticCenter.record(
+                      widgetKey = "custom_studio",
+                      category = "HTML_PREVIEW",
+                      severity = DiagnosticSeverity.ERROR,
+                      message = "Preview JS error (line ${consoleMessage.lineNumber()}): ${consoleMessage.message()}",
+                    )
+                  }
+                  return super.onConsoleMessage(consoleMessage)
+                }
+
                 override fun onShowFileChooser(
                   webView: WebView?,
                   filePathCallback: ValueCallback<Array<Uri>>?,
@@ -575,11 +711,17 @@ fun HtmlWidgetEditorSection(
                   return true
                 }
               }
-              webViewClient = object : WebViewClient() {}
+              webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                  return !NexusWidgetJsBridge.isSafeWebViewUrl(request?.url?.toString())
+                }
+              }
+              liveWebViewRef = this
               onWebViewReady(this)
             }
           },
           update = { webView ->
+            liveWebViewRef = webView
             onWebViewReady(webView)
             webView.setBackgroundColor(if (isTransparent) android.graphics.Color.TRANSPARENT else android.graphics.Color.BLACK)
             if (webView.tag != composedDoc) {
@@ -615,11 +757,45 @@ fun HtmlWidgetEditorSection(
         )
       }
       Spacer(modifier = Modifier.height(6.dp))
-      Text(
-        "JS APIs: NexusBridge (getBatteryJson/getClockJson...) & NexusWidget (getAllTelemetryJson(), getAssetsJson(), getWidgetMetaJson()).",
-        style = MaterialTheme.typography.labelSmall,
-        color = colors.textSecondary,
-      )
+      OutlinedButton(
+        onClick = { showBridgeDocs = !showBridgeDocs },
+        modifier = Modifier.fillMaxWidth(),
+      ) {
+        Text(if (showBridgeDocs) "Hide JS Bridge API Reference" else "Show Universal JS Bridge APIs (13 Endpoints)")
+      }
+      if (previewErrors.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(colors.critical.copy(alpha = 0.14f))
+            .padding(8.dp),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Text(
+            text = previewErrors.last().message,
+            style = MaterialTheme.typography.labelSmall,
+            color = colors.critical,
+            modifier = Modifier.weight(1f),
+          )
+          IconButton(
+            onClick = { WidgetDiagnosticCenter.clear() },
+            modifier = Modifier.size(32.dp),
+          ) {
+            Icon(Icons.Default.Delete, contentDescription = "Clear JS errors", tint = colors.critical, modifier = Modifier.size(16.dp))
+          }
+        }
+      }
+      if (showBridgeDocs) {
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+          "window.NexusWidget APIs: getDeviceInfo(), getBatteryInfo(), getStorageInfo(), getMemoryInfo(), getNetworkInfo(), getCurrentTime(), getWeather(), getMediaSession(), getCalendarEvents(), getSelectedPhotos(), requestPermission(cap), openApp(pkg), executeWidgetAction(json), saveCustomData(k,v), getCustomData(k). CSS Vars: --nexus-width-dp, --nexus-height-dp, --nexus-scale. Listen for 'nexus:data' window event for live updates.",
+          style = MaterialTheme.typography.labelSmall,
+          color = colors.textSecondary,
+        )
+      }
     }
 
     NexusGlassCard {
@@ -638,9 +814,13 @@ fun HtmlWidgetEditorSection(
         }
       }
       Text(
-        "Viewport: ${spec.targetWidthDp} dp × ${spec.targetHeightDp} dp",
+        text = if (isAutoSize) {
+          "Responsive Auto-Fit (matches Home slot bounds • Preview ${spec.targetWidthDp}×${spec.targetHeightDp} dp)"
+        } else {
+          "Viewport: ${spec.targetWidthDp} dp × ${spec.targetHeightDp} dp"
+        },
         style = MaterialTheme.typography.labelSmall,
-        color = colors.textSecondary,
+        color = if (isAutoSize) colors.accentSecondary else colors.textSecondary,
       )
       Slider(
         value = spec.targetWidthDp.toFloat(),
@@ -664,18 +844,59 @@ fun HtmlWidgetEditorSection(
           )
         }
       }
+      Spacer(modifier = Modifier.height(6.dp))
+      val autoDetectedAnim = remember(htmlCode, cssCode, jsCode) {
+        com.example.widget.AnimatedWidgetEngine.detectAnimatedHtml(htmlCode, cssCode, jsCode)
+      }
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Column(modifier = Modifier.weight(1f)) {
+          Text("Animated Widget (Frame Loop)", color = colors.textPrimary, style = MaterialTheme.typography.titleSmall)
+          Text(
+            if (autoDetectedAnim) "CSS/JS animation auto-detected for Home Screen"
+            else "Captures multi-frame animated loop for Home Screen",
+            color = colors.textSecondary,
+            style = MaterialTheme.typography.labelSmall,
+          )
+        }
+        Switch(
+          checked = spec.enableAnimation || autoDetectedAnim,
+          onCheckedChange = onToggleAnimation,
+        )
+      }
+      if (spec.enableAnimation || autoDetectedAnim) {
+        Row(
+          modifier = Modifier.horizontalScroll(rememberScrollState()),
+          horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+          listOf(110 to "Smooth 110ms", 160 to "Fast 160ms", 240 to "Balanced 240ms").forEach { (ms, lbl) ->
+            FilterChip(
+              selected = spec.animationFrameMs == ms,
+              onClick = { onSetAnimationSpeed(ms) },
+              label = { Text(lbl) },
+            )
+          }
+        }
+      }
     }
 
     NexusGlassCard {
-      SectionHeader(title = "Local Images & Audio Assets")
+      SectionHeader(title = "Local Images, Fonts & Audio Assets")
       Spacer(modifier = Modifier.height(6.dp))
       OutlinedButton(
-        onClick = { localMediaPickerLauncher.launch(arrayOf("image/*", "audio/*")) },
+        onClick = {
+          localMediaPickerLauncher.launch(
+            arrayOf("image/*", "audio/*", "font/*", "application/font-woff", "application/x-font-ttf", "application/octet-stream")
+          )
+        },
         modifier = Modifier.fillMaxWidth(),
       ) {
         Icon(Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(6.dp))
-        Text("Import Image or Audio into Widget")
+        Text("Import Image, Font (.ttf) or Audio")
       }
       if (importedAssetNames.isNotEmpty()) {
         Spacer(modifier = Modifier.height(6.dp))

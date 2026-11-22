@@ -3,7 +3,7 @@ package com.example.widget
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.PowerManager
+import com.example.widget.engine.WidgetMediaSessionHub
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -17,21 +17,22 @@ class NexusWidgetRefreshReceiver : BroadcastReceiver() {
       action == Intent.ACTION_MY_PACKAGE_REPLACED ||
       action == Intent.ACTION_TIME_CHANGED ||
       action == Intent.ACTION_TIMEZONE_CHANGED ||
-      action == Intent.ACTION_DATE_CHANGED
+      action == Intent.ACTION_DATE_CHANGED ||
+      action == Intent.ACTION_LOCALE_CHANGED
 
     if (!isPeriodicTick && !isSystemRestoreOrTime) return
 
-    val pending = goAsync()
+    val appCtx = context.applicationContext
+    NexusWidgetLiveTicker.ensureRegistered(appCtx)
+    NexusWidgetSyncJobService.schedulePeriodic(appCtx)
+    WidgetMediaSessionHub.attachSessionObserver(appCtx)
+
+    val pending = runCatching { goAsync() }.getOrNull()
     CoroutineScope(Dispatchers.IO).launch {
       try {
-        val power = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
-        val isInteractive = runCatching { power?.isInteractive ?: true }.getOrDefault(true)
-        if (!isPeriodicTick || isInteractive) {
-          NexusWidgetUpdater.refreshAll(context.applicationContext)
-        }
-        NexusWidgetAlarmScheduler.rescheduleIfActive(context.applicationContext)
+        NexusWidgetUpdater.refreshAll(appCtx)
       } finally {
-        pending.finish()
+        runCatching { pending?.finish() }
       }
     }
   }

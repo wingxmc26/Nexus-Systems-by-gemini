@@ -23,11 +23,17 @@ import kotlinx.coroutines.launch
 
 class NexusSystemStatusWidgetProvider : AppWidgetProvider() {
 
+  override fun onEnabled(context: Context) {
+    super.onEnabled(context)
+    NexusWidgetLiveTicker.ensureRegistered(context.applicationContext)
+  }
+
   override fun onUpdate(
     context: Context,
     appWidgetManager: AppWidgetManager,
     appWidgetIds: IntArray,
   ) {
+    NexusWidgetLiveTicker.ensureRegistered(context.applicationContext)
     val pendingResult = goAsync()
     CoroutineScope(Dispatchers.IO).launch {
       try {
@@ -90,26 +96,32 @@ class NexusSystemStatusWidgetProvider : AppWidgetProvider() {
         container?.preferencesRepository?.getBuiltInWidgetStyle(WIDGET_STYLE_KEY)
       }.getOrNull() ?: BuiltInWidgetStyleConfig()
 
-      val (ramLine, ramPct) = runCatching {
-        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-        val memInfo = ActivityManager.MemoryInfo()
-        am?.getMemoryInfo(memInfo)
-        val totalRam = memInfo.totalMem.coerceAtLeast(1L)
-        val usedRam = (totalRam - memInfo.availMem).coerceAtLeast(0L)
-        val pct = ((usedRam.toFloat() / totalRam.toFloat()) * 100f).toInt().coerceIn(0, 100)
-        "RAM: ${Formatters.formatBytes(usedRam)} / ${Formatters.formatBytes(totalRam)} ($pct%)" to pct
-      }.getOrDefault("RAM: Tap to inspect" to 0)
+      val memState = runCatching { container?.widgetDataHub?.memoryProvider?.fetch(context) }.getOrNull()
+      val mem = (memState as? com.example.widget.engine.WidgetDataState.Available)?.data
+      val (ramLine, ramPct) = if (mem != null && mem.totalRamBytes > 0L) {
+        val usedRam = (mem.totalRamBytes - mem.availableRamBytes).coerceAtLeast(0L)
+        val pct = mem.usagePercent.toInt().coerceIn(0, 100)
+        "RAM: ${Formatters.formatBytes(usedRam)} / ${Formatters.formatBytes(mem.totalRamBytes)} ($pct%)" to pct
+      } else {
+        "RAM: Tap to inspect" to 0
+      }
 
-      val storageLine = runCatching {
-        val stat = StatFs(Environment.getDataDirectory().path)
-        "Free Storage: ${Formatters.formatBytes(stat.availableBytes.coerceAtLeast(0L))} of ${Formatters.formatBytes(stat.totalBytes.coerceAtLeast(0L))}"
-      }.getOrDefault("Storage: Tap to inspect")
+      val stoState = runCatching { container?.widgetDataHub?.storageProvider?.fetch(context) }.getOrNull()
+      val sto = (stoState as? com.example.widget.engine.WidgetDataState.Available)?.data
+      val storageLine = if (sto != null && sto.internalTotalBytes > 0L) {
+        "Free Storage: ${Formatters.formatBytes(sto.internalAvailableBytes.coerceAtLeast(0L))} of ${Formatters.formatBytes(sto.internalTotalBytes)}"
+      } else {
+        "Storage: Tap to inspect"
+      }
 
-      val batteryLine = runCatching {
-        val battery = container?.batteryDataSource?.readBatterySnapshot()
-        val batPct = (battery?.percentage as? MetricValue.Available)?.value?.let { "$it%" } ?: "N/A"
-        "Battery: $batPct • ${battery?.statusLabel ?: "Unknown"} (${battery?.chargeSource ?: "Unknown"})"
-      }.getOrDefault("Battery: Tap to inspect")
+      val batState = runCatching { container?.widgetDataHub?.batteryProvider?.fetch(context) }.getOrNull()
+      val battery = (batState as? com.example.widget.engine.WidgetDataState.Available)?.data
+      val batteryLine = if (battery != null) {
+        val batPct = (battery.percentage as? MetricValue.Available)?.value?.let { "$it%" } ?: "N/A"
+        "Battery: $batPct • ${battery.statusLabel} (${battery.chargeSource})"
+      } else {
+        "Battery: Tap to inspect"
+      }
 
       appWidgetIds.forEach { widgetId ->
         runCatching {

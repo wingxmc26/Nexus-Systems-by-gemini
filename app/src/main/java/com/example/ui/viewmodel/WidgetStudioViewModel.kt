@@ -128,6 +128,182 @@ private const val IOS_CLOCK_JS = """function tickIos() {
 tickIos();
 setInterval(tickIos, 2000);"""
 
+private const val ANIM_PULSE_HTML = """<div class="pulse-card">
+  <div class="ring"></div>
+  <div class="top">
+    <span id="date" class="dt">FRI, NOV 20</span>
+    <span id="bat" class="bt">88%</span>
+  </div>
+  <div id="clock" class="clk">09:41</div>
+  <div id="sub" class="sub">NEXUS ANIMATED HUD</div>
+</div>"""
+
+private const val ANIM_PULSE_CSS = """* { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+body { background: transparent; color: #FFFFFF; }
+@keyframes neonPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(225,29,72,0.45), inset 0 0 12px rgba(225,29,72,0.18); border-color: rgba(225,29,72,0.75); }
+  50% { box-shadow: 0 0 22px rgba(56,189,248,0.85), inset 0 0 20px rgba(56,189,248,0.28); border-color: rgba(56,189,248,0.95); }
+}
+@keyframes orbit {
+  0% { transform: rotate(0deg) scale(0.95); opacity: 0.45; }
+  50% { transform: rotate(180deg) scale(1.06); opacity: 0.9; }
+  100% { transform: rotate(360deg) scale(0.95); opacity: 0.45; }
+}
+.pulse-card { position: relative; overflow: hidden; width: 100%; min-height: 100%; border-radius: 22px; padding: 16px; background: linear-gradient(145deg, #090A10, #170C18); border: 2px solid rgba(225,29,72,0.7); animation: neonPulse 1.6s ease-in-out infinite; display: flex; flex-direction: column; justify-content: space-between; }
+.ring { position: absolute; right: -26px; top: -26px; width: 96px; height: 96px; border-radius: 50%; border: 3px dashed rgba(244,63,94,0.55); animation: orbit 2.2s linear infinite; }
+.top { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #F43F5E; }
+.bt { color: #34D399; }
+.clk { font-size: 46px; font-weight: 800; letter-spacing: -1px; text-align: center; text-shadow: 0 2px 16px rgba(225,29,72,0.5); }
+.sub { font-size: 11px; color: #CBD5E1; text-align: center; letter-spacing: 1px; }"""
+
+private const val ANIM_PULSE_JS = """function tickPulse() {
+  if (typeof NexusWidget === 'undefined') return;
+  try {
+    var d = JSON.parse(NexusWidget.getAllTelemetryJson());
+    document.getElementById('clock').innerText = d.time24;
+    document.getElementById('date').innerText = d.dateShort.toUpperCase();
+    document.getElementById('bat').innerText = d.batteryPercent + '% ' + (d.isCharging ? '⚡' : '');
+    document.getElementById('sub').innerText = 'RAM ' + d.ramUsagePercent + '% • ' + d.freeStorage + ' FREE';
+  } catch (e) {}
+}
+tickPulse();
+setInterval(tickPulse, 1000);"""
+
+private const val ANIM_WAVE_HTML = """<div class="wave-box">
+  <div class="hdr"><span class="ttl">NEXUS SPECTRUM</span><span id="clk">09:41</span></div>
+  <div class="bars">
+    <span class="b b1"></span><span class="b b2"></span><span class="b b3"></span>
+    <span class="b b4"></span><span class="b b5"></span><span class="b b6"></span>
+    <span class="b b7"></span><span class="b b8"></span>
+  </div>
+  <div id="info" class="info">Battery -- • RAM --</div>
+</div>"""
+
+private const val ANIM_WAVE_CSS = """* { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+body { background: transparent; color: #FFF; }
+@keyframes eq { 0%, 100% { transform: scaleY(0.28); } 50% { transform: scaleY(1); } }
+.wave-box { width: 100%; min-height: 100%; border-radius: 20px; padding: 14px; background: linear-gradient(135deg, #07090F, #0F172A); border: 1px solid rgba(56,189,248,0.45); display: flex; flex-direction: column; justify-content: space-between; }
+.hdr { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 13px; }
+.ttl { color: #38BDF8; letter-spacing: 1px; }
+#clk { font-size: 22px; color: #FFF; }
+.bars { height: 48px; display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; margin: 8px 0; }
+.b { flex: 1; height: 100%; border-radius: 6px; transform-origin: bottom; background: linear-gradient(to top, #E11D48, #38BDF8); animation: eq 1.1s ease-in-out infinite; }
+.b2 { animation-delay: 0.14s; } .b3 { animation-delay: 0.28s; } .b4 { animation-delay: 0.42s; }
+.b5 { animation-delay: 0.56s; } .b6 { animation-delay: 0.70s; } .b7 { animation-delay: 0.84s; } .b8 { animation-delay: 0.98s; }
+.info { font-size: 12px; color: #94A3B8; }"""
+
+private const val ANIM_WAVE_JS = """function tickWave() {
+  if (typeof NexusWidget === 'undefined') return;
+  try {
+    var d = JSON.parse(NexusWidget.getAllTelemetryJson());
+    document.getElementById('clk').innerText = d.time24;
+    document.getElementById('info').innerText = 'Battery ' + d.batteryPercent + '% • RAM ' + d.ramUsagePercent + '%';
+  } catch (e) {}
+}
+tickWave();
+setInterval(tickWave, 1500);"""
+
+private const val MEDIA_HUD_HTML = """<div class="m-card">
+  <div class="m-top">
+    <span id="m-src" class="m-src">MEDIA ENGINE</span>
+    <span id="m-state" class="m-state">IDLE</span>
+  </div>
+  <div class="m-body">
+    <img id="m-art" class="m-art" style="display:none" />
+    <div class="m-info">
+      <div id="m-title" class="m-title">Waiting for media...</div>
+      <div id="m-artist" class="m-artist">Play Spotify, YT Music or Nexus Audio</div>
+      <div id="m-time" class="m-time">0:00 / 0:00</div>
+    </div>
+  </div>
+  <div class="m-bar"><div id="m-fill" class="m-fill"></div></div>
+</div>"""
+
+private const val MEDIA_HUD_CSS = """* { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+body { background: transparent; color: #FFF; }
+.m-card { width: 100%; min-height: 100%; border-radius: 20px; padding: 14px; background: linear-gradient(140deg, rgba(10,12,18,0.95), rgba(30,10,22,0.92)); border: 1px solid rgba(225,29,72,0.45); display: flex; flex-direction: column; justify-content: space-between; }
+.m-top { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #F43F5E; }
+.m-state { color: #34D399; }
+.m-body { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.m-art { width: 46px; height: 46px; border-radius: 10px; object-fit: cover; }
+.m-info { flex: 1; min-width: 0; }
+.m-title { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-artist { font-size: 11px; color: #94A3B8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.m-time { font-size: 10px; color: #CBD5E1; margin-top: 3px; }
+.m-bar { width: 100%; height: 4px; border-radius: 99px; background: rgba(255,255,255,0.12); overflow: hidden; }
+.m-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #E11D48, #38BDF8); }"""
+
+private const val MEDIA_HUD_JS = """function fmtMs(ms){ var s=Math.max(0,Math.floor(ms/1000)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function syncMedia(){
+  if (typeof NexusWidget === 'undefined') return;
+  try {
+    var m = JSON.parse(NexusWidget.getMediaSession());
+    if (m.status !== 'available') {
+      document.getElementById('m-src').innerText = 'MEDIA PERMISSION';
+      document.getElementById('m-state').innerText = 'REQUIRED';
+      document.getElementById('m-title').innerText = 'Enable Notification Access';
+      document.getElementById('m-artist').innerText = m.reason || 'Grant permission in Widgets screen';
+      return;
+    }
+    document.getElementById('m-src').innerText = (m.sourceAppName || 'MEDIA').toUpperCase();
+    document.getElementById('m-state').innerText = m.isPlaying ? 'PLAYING' : (m.hasActiveSession ? 'PAUSED' : 'IDLE');
+    document.getElementById('m-title').innerText = m.title;
+    document.getElementById('m-artist').innerText = m.artist || '';
+    var art = document.getElementById('m-art');
+    if (m.artworkFileUrl) { art.src = m.artworkFileUrl; art.style.display = 'block'; } else { art.style.display = 'none'; }
+    if (m.durationMs > 0) {
+      document.getElementById('m-time').innerText = fmtMs(m.positionMs) + ' / ' + fmtMs(m.durationMs);
+      document.getElementById('m-fill').style.width = Math.min(100, Math.round((m.positionMs * 100) / m.durationMs)) + '%';
+    } else {
+      document.getElementById('m-time').innerText = '';
+      document.getElementById('m-fill').style.width = m.isPlaying ? '35%' : '0%';
+    }
+  } catch (e) {}
+}
+syncMedia();
+window.addEventListener('nexus:data', syncMedia);
+setInterval(syncMedia, 2000);"""
+
+private const val SYS_NET_HTML = """<div class="sn-card">
+  <div class="sn-head">
+    <span id="sn-time" class="sn-time">--:--</span>
+    <span id="sn-net" class="sn-net">--</span>
+  </div>
+  <div id="sn-dev" class="sn-dev">NEXUS</div>
+  <div class="sn-grid">
+    <div id="sn-bat" class="sn-pill">BAT --%</div>
+    <div id="sn-ram" class="sn-pill">RAM --%</div>
+  </div>
+</div>"""
+
+private const val SYS_NET_CSS = """* { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+body { background: transparent; color: #FFF; }
+.sn-card { width: 100%; min-height: 100%; border-radius: 20px; padding: 14px; background: linear-gradient(155deg, #070B12, #0F172A); border: 1px solid rgba(56,189,248,0.4); display: flex; flex-direction: column; justify-content: space-between; }
+.sn-head { display: flex; justify-content: space-between; align-items: baseline; }
+.sn-time { font-size: 28px; font-weight: 800; }
+.sn-net { font-size: 11px; font-weight: 700; color: #38BDF8; }
+.sn-dev { font-size: 11px; color: #94A3B8; margin: 4px 0; }
+.sn-grid { display: flex; gap: 8px; }
+.sn-pill { flex: 1; background: rgba(255,255,255,0.06); border-radius: 10px; padding: 6px 8px; font-size: 11px; font-weight: 700; text-align: center; }"""
+
+private const val SYS_NET_JS = """function syncSys(){
+  if (typeof NexusWidget === 'undefined') return;
+  try {
+    var t = JSON.parse(NexusWidget.getCurrentTime());
+    var n = JSON.parse(NexusWidget.getNetworkInfo());
+    var b = JSON.parse(NexusWidget.getBatteryInfo());
+    var m = JSON.parse(NexusWidget.getMemoryInfo());
+    var d = JSON.parse(NexusWidget.getDeviceInfo());
+    document.getElementById('sn-time').innerText = t.is24HourFormat ? t.time24 : t.time12;
+    document.getElementById('sn-net').innerText = (n.isConnected ? n.transportType : 'OFFLINE').toUpperCase();
+    document.getElementById('sn-dev').innerText = d.manufacturer + ' ' + d.model + ' • ' + t.timezoneDisplay;
+    document.getElementById('sn-bat').innerText = 'BAT ' + b.percentage + '%' + (b.isCharging ? '⚡' : '');
+    document.getElementById('sn-ram').innerText = 'RAM ' + m.usagePercent + '%';
+  } catch (e) {}
+}
+syncSys();
+window.addEventListener('nexus:data', syncSys);"""
+
 class WidgetStudioViewModel(application: Application) : AndroidViewModel(application) {
   private val container = NexusContainer.get(application)
   private val dao = container.database.customWidgetDao()
@@ -303,6 +479,66 @@ class WidgetStudioViewModel(application: Application) : AndroidViewModel(applica
       css = DEFAULT_WIDGET_CSS,
       js = DEFAULT_WIDGET_JS,
     ),
+    WidgetTemplate(
+      title = "Animated Neon Clock",
+      kind = "HTML",
+      visualSpec = VisualWidgetSpec(
+        htmlTransparent = true,
+        enableAnimation = true,
+        animationFrameMs = 160,
+        sizePresetName = WidgetSizePreset.MEDIUM.name,
+        targetWidthDp = WidgetSizePreset.MEDIUM.widthDp,
+        targetHeightDp = WidgetSizePreset.MEDIUM.heightDp,
+        refreshIntervalMinutes = 1,
+      ),
+      html = ANIM_PULSE_HTML,
+      css = ANIM_PULSE_CSS,
+      js = ANIM_PULSE_JS,
+    ),
+    WidgetTemplate(
+      title = "Animated Wave HUD",
+      kind = "HTML",
+      visualSpec = VisualWidgetSpec(
+        htmlTransparent = true,
+        enableAnimation = true,
+        animationFrameMs = 140,
+        sizePresetName = WidgetSizePreset.MEDIUM.name,
+        targetWidthDp = WidgetSizePreset.MEDIUM.widthDp,
+        targetHeightDp = WidgetSizePreset.MEDIUM.heightDp,
+        refreshIntervalMinutes = 1,
+      ),
+      html = ANIM_WAVE_HTML,
+      css = ANIM_WAVE_CSS,
+      js = ANIM_WAVE_JS,
+    ),
+    WidgetTemplate(
+      title = "HTML Media Player HUD",
+      kind = "HTML",
+      visualSpec = VisualWidgetSpec(
+        htmlTransparent = true,
+        sizePresetName = WidgetSizePreset.MEDIUM.name,
+        targetWidthDp = WidgetSizePreset.MEDIUM.widthDp,
+        targetHeightDp = WidgetSizePreset.MEDIUM.heightDp,
+        refreshIntervalMinutes = 1,
+      ),
+      html = MEDIA_HUD_HTML,
+      css = MEDIA_HUD_CSS,
+      js = MEDIA_HUD_JS,
+    ),
+    WidgetTemplate(
+      title = "HTML System + Network HUD",
+      kind = "HTML",
+      visualSpec = VisualWidgetSpec(
+        htmlTransparent = true,
+        sizePresetName = WidgetSizePreset.MEDIUM.name,
+        targetWidthDp = WidgetSizePreset.MEDIUM.widthDp,
+        targetHeightDp = WidgetSizePreset.MEDIUM.heightDp,
+        refreshIntervalMinutes = 1,
+      ),
+      html = SYS_NET_HTML,
+      css = SYS_NET_CSS,
+      js = SYS_NET_JS,
+    ),
   )
 
   val uiState: StateFlow<WidgetStudioUiState> = combine(
@@ -424,6 +660,14 @@ class WidgetStudioViewModel(application: Application) : AndroidViewModel(applica
     _visualSpec.value = _visualSpec.value.copy(refreshIntervalMinutes = minutes.coerceIn(0, 60))
   }
 
+  fun setAnimationEnabled(enabled: Boolean) {
+    _visualSpec.value = _visualSpec.value.copy(enableAnimation = enabled)
+  }
+
+  fun setAnimationFrameMs(ms: Int) {
+    _visualSpec.value = _visualSpec.value.copy(animationFrameMs = ms.coerceIn(80, 1000))
+  }
+
   fun addElement(kind: VisualElementKind) {
     val cur = _visualSpec.value
     val maxOrder = (cur.elements.maxOfOrNull { it.layerOrder } ?: -1) + 1
@@ -498,21 +742,32 @@ class WidgetStudioViewModel(application: Application) : AndroidViewModel(applica
       runCatching {
         app.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
       }
-      val copied = copyUriIntoDir(app, uri, "widget_images", "img_${System.currentTimeMillis()}.png")
+      val rawName = resolveDisplayName(app, uri).lowercase()
+      val mime = app.contentResolver.getType(uri).orEmpty().lowercase()
+      val ext = when {
+        mime.contains("gif") || rawName.endsWith(".gif") -> "gif"
+        mime.contains("webp") || rawName.endsWith(".webp") -> "webp"
+        mime.contains("jpeg") || mime.contains("jpg") || rawName.endsWith(".jpg") || rawName.endsWith(".jpeg") -> "jpg"
+        else -> "png"
+      }
+      val copied = copyUriIntoDir(app, uri, "widget_images", "img_${System.currentTimeMillis()}.$ext")
       if (copied == null) {
         _statusMessage.value = "Failed to import selected image."
         return@launch
       }
-      val cur = _visualSpec.value
+      val isGif = ext == "gif" || com.example.widget.AnimatedWidgetEngine.isAnimatedGifFile(copied.absolutePath)
+      val cur = if (isGif) _visualSpec.value.copy(enableAnimation = true) else _visualSpec.value
       val sel = cur.elements.firstOrNull { it.id == _selectedElementId.value }
       if (sel != null && sel.kind == VisualElementKind.IMAGE) {
-        updateElement(sel.copy(imageUriOrPath = copied.absolutePath))
+        _visualSpec.value = cur.copy(
+          elements = cur.elements.map { if (it.id == sel.id) sel.copy(imageUriOrPath = copied.absolutePath) else it }
+        )
       } else {
         val maxOrder = (cur.elements.maxOfOrNull { it.layerOrder } ?: -1) + 1
         val newEl = VisualWidgetElement(
           id = "img_${UUID.randomUUID().toString().take(6)}",
           kind = VisualElementKind.IMAGE,
-          label = "Photo",
+          label = if (isGif) "Animated GIF" else "Photo",
           xFraction = 0.06f,
           yFraction = 0.12f,
           widthFraction = 0.36f,
@@ -524,7 +779,11 @@ class WidgetStudioViewModel(application: Application) : AndroidViewModel(applica
         _visualSpec.value = cur.copy(elements = cur.elements + newEl)
         _selectedElementId.value = newEl.id
       }
-      _statusMessage.value = "Imported local image into widget canvas."
+      _statusMessage.value = if (isGif) {
+        "Imported animated GIF into widget canvas."
+      } else {
+        "Imported local image into widget canvas."
+      }
     }
   }
 
@@ -542,7 +801,9 @@ class WidgetStudioViewModel(application: Application) : AndroidViewModel(applica
         return@launch
       }
       refreshAssetsList()
-      if (insertTagIntoHtml) {
+      val lowerName = safeName.lowercase()
+      val isFont = lowerName.endsWith(".ttf") || lowerName.endsWith(".otf") || lowerName.endsWith(".woff2") || lowerName.endsWith(".woff")
+      if (insertTagIntoHtml && !isFont) {
         val mime = app.contentResolver.getType(uri).orEmpty().lowercase()
         val tag = when {
           mime.startsWith("audio/") || safeName.endsWith(".mp3", true) || safeName.endsWith(".wav", true) ->
@@ -552,7 +813,11 @@ class WidgetStudioViewModel(application: Application) : AndroidViewModel(applica
         }
         _htmlCode.value = _htmlCode.value + tag
       }
-      _statusMessage.value = "Imported '${copied.name}' into widget local assets."
+      _statusMessage.value = if (isFont) {
+        "Imported font '${copied.name}' (CSS font-family: '${copied.nameWithoutExtension}')."
+      } else {
+        "Imported '${copied.name}' into widget local assets."
+      }
     }
   }
 
@@ -712,20 +977,18 @@ class WidgetStudioViewModel(application: Application) : AndroidViewModel(applica
 
   fun exportHtmlToUri(uri: Uri) {
     viewModelScope.launch(Dispatchers.IO) {
-      val doc = """<!DOCTYPE html>
-<html>
-<head><meta name="viewport" content="width=${_visualSpec.value.targetWidthDp},initial-scale=1.0">
-<style>
-${_cssCode.value}
-</style>
-</head>
-<body>
-${_htmlCode.value}
-<script>
-${_jsCode.value}
-</script>
-</body>
-</html>"""
+      val spec = _visualSpec.value
+      val assetsDir = File(getApplication<Application>().filesDir, NexusWidgetJsBridge.ASSETS_DIR)
+      val doc = NexusWidgetJsBridge.composeHtmlDocument(
+        rawHtml = _htmlCode.value,
+        rawCss = _cssCode.value,
+        rawJs = _jsCode.value,
+        widthDp = spec.targetWidthDp,
+        heightDp = spec.targetHeightDp,
+        transparentBg = spec.htmlTransparent,
+        assetsDir = assetsDir,
+        isAutoSize = spec.sizePresetName.equals(WidgetSizePreset.AUTO.name, ignoreCase = true),
+      )
       runCatching {
         getApplication<Application>().contentResolver.openOutputStream(uri)?.use { out ->
           out.write(doc.toByteArray())
@@ -744,12 +1007,22 @@ ${_jsCode.value}
         val raw = getApplication<Application>().contentResolver.openInputStream(uri)?.use {
           it.bufferedReader().readText()
         } ?: error("Cannot read selected file")
-        val css = Regex("<style[^>]*>([\\s\\S]*?)</style>", RegexOption.IGNORE_CASE).find(raw)?.groupValues?.getOrNull(1)?.trim()
-        val js = Regex("<script[^>]*>([\\s\\S]*?)</script>", RegexOption.IGNORE_CASE).find(raw)?.groupValues?.getOrNull(1)?.trim()
+        val styleMatches = Regex("<style[^>]*>([\\s\\S]*?)</style>", RegexOption.IGNORE_CASE).findAll(raw)
+          .mapNotNull { it.groupValues.getOrNull(1)?.trim() }
+          .filter { it.isNotEmpty() }
+          .toList()
+        val scriptMatches = Regex("<script(?![^>]*\\bsrc=)[^>]*>([\\s\\S]*?)</script>", RegexOption.IGNORE_CASE).findAll(raw)
+          .mapNotNull { it.groupValues.getOrNull(1)?.trim() }
+          .filter { it.isNotEmpty() }
+          .toList()
         val body = Regex("<body[^>]*>([\\s\\S]*?)</body>", RegexOption.IGNORE_CASE).find(raw)?.groupValues?.getOrNull(1)
           ?.replace(Regex("<script[\\s\\S]*?</script>", RegexOption.IGNORE_CASE), "")
           ?.trim()
-        Triple(body ?: raw, css ?: _cssCode.value, js ?: _jsCode.value)
+        Triple(
+          body ?: raw,
+          if (styleMatches.isNotEmpty()) styleMatches.joinToString("\n\n") else "",
+          if (scriptMatches.isNotEmpty()) scriptMatches.joinToString("\n\n") else "",
+        )
       }.onSuccess { (body, css, js) ->
         _editorMode.value = "HTML"
         _htmlCode.value = body

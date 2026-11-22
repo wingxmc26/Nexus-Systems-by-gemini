@@ -21,24 +21,24 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Launch
+import androidx.compose.material.icons.automirrored.filled.ViewSidebar
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.BatteryStd
+import androidx.compose.material.icons.filled.BubbleChart
 import androidx.compose.material.icons.filled.DesignServices
+import androidx.compose.material.icons.filled.EnhancedEncryption
 import androidx.compose.material.icons.filled.Equalizer
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.Launch
-import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.Monitor
+import androidx.compose.material.icons.filled.Gesture
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.RocketLaunch
-import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.SettingsApplications
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VideoLibrary
@@ -46,7 +46,6 @@ import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -66,7 +65,6 @@ import com.example.data.model.BatteryTelemetry
 import com.example.data.model.DashboardModuleId
 import com.example.data.model.HardwareTelemetry
 import com.example.data.model.MetricValue
-import com.example.data.model.StorageOverview
 import com.example.ui.components.LoadingTelemetryState
 import com.example.ui.components.MetricKeyValueRow
 import com.example.ui.components.NexusGlassCard
@@ -141,6 +139,9 @@ fun DashboardScreen(
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
+        item(key = "advanced_suite_spotlight") {
+          AdvancedSuiteSpotlightCard(onNavigate = onNavigate)
+        }
         if (visibleCards.isEmpty()) {
           item {
             NexusGlassCard(
@@ -168,18 +169,6 @@ fun DashboardScreen(
                   battery = battery,
                   chargingDurationMs = chargingDurationMs,
                   onClick = { onNavigate(NexusRoutes.BATTERY) },
-                )
-              }
-              DashboardModuleId.RAM_CARD -> {
-                RamDashboardCard(
-                  hardware = overview.hardware,
-                  onClick = { onNavigate(NexusRoutes.RAM) },
-                )
-              }
-              DashboardModuleId.STORAGE_CARD -> {
-                StorageDashboardCard(
-                  storage = overview.storage,
-                  onClick = { onNavigate(NexusRoutes.STORAGE) },
                 )
               }
               DashboardModuleId.DEVICE_OVERVIEW -> {
@@ -278,118 +267,6 @@ private fun BatteryDashboardCard(
         )
       }
     }
-  }
-}
-
-@Composable
-private fun RamDashboardCard(
-  hardware: HardwareTelemetry?,
-  onClick: () -> Unit,
-) {
-  val colors = NexusThemeExtras.colors
-  val ramFraction = if (hardware != null && hardware.ramTotalBytes > 0) {
-    (hardware.ramUsedBytes.toFloat() / hardware.ramTotalBytes.toFloat()).coerceIn(0f, 1f)
-  } else 0f
-
-  NexusGlassCard(
-    onClick = onClick,
-    testTag = "dashboard_ram_card",
-  ) {
-    Row(
-      modifier = Modifier.fillMaxWidth(),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Default.Memory, contentDescription = null, tint = colors.accent, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("RAM Usage", style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
-      }
-      Text(
-        text = "${(ramFraction * 100f).toInt()}%",
-        style = NexusTextStyles.MetricMedium,
-        color = colors.textPrimary,
-      )
-    }
-    Spacer(modifier = Modifier.height(10.dp))
-    LinearProgressIndicator(
-      progress = { ramFraction },
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(7.dp)
-        .clip(RoundedCornerShape(4.dp)),
-      color = colors.accent,
-      trackColor = colors.elevatedSurface,
-      strokeCap = StrokeCap.Round,
-    )
-    Spacer(modifier = Modifier.height(8.dp))
-    MetricKeyValueRow(
-      label = "Used / Total",
-      value = hardware?.let {
-        "${Formatters.formatBytes(it.ramUsedBytes)} / ${Formatters.formatBytes(it.ramTotalBytes)}"
-      } ?: "--",
-    )
-    MetricKeyValueRow(
-      label = "Available RAM",
-      value = hardware?.let { Formatters.formatBytes(it.ramAvailableBytes) } ?: "--",
-      valueColor = colors.nominal,
-    )
-  }
-}
-
-@Composable
-private fun StorageDashboardCard(
-  storage: StorageOverview?,
-  onClick: () -> Unit,
-) {
-  val colors = NexusThemeExtras.colors
-  val fraction = if (storage != null && storage.internalTotalBytes > 0) {
-    (storage.internalUsedBytes.toFloat() / storage.internalTotalBytes.toFloat()).coerceIn(0f, 1f)
-  } else 0f
-
-  NexusGlassCard(
-    onClick = onClick,
-    testTag = "dashboard_storage_card",
-  ) {
-    Row(
-      modifier = Modifier.fillMaxWidth(),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Default.Storage, contentDescription = null, tint = colors.accent, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("Storage Usage", style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
-      }
-      Text(
-        text = "${(fraction * 100f).toInt()}%",
-        style = NexusTextStyles.MetricMedium,
-        color = colors.textPrimary,
-      )
-    }
-    Spacer(modifier = Modifier.height(10.dp))
-    LinearProgressIndicator(
-      progress = { fraction },
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(7.dp)
-        .clip(RoundedCornerShape(4.dp)),
-      color = colors.accent,
-      trackColor = colors.elevatedSurface,
-      strokeCap = StrokeCap.Round,
-    )
-    Spacer(modifier = Modifier.height(8.dp))
-    MetricKeyValueRow(
-      label = "Used / Total",
-      value = storage?.let {
-        "${Formatters.formatBytes(it.internalUsedBytes)} / ${Formatters.formatBytes(it.internalTotalBytes)}"
-      } ?: "--",
-    )
-    MetricKeyValueRow(
-      label = "Available Space",
-      value = storage?.let { Formatters.formatBytes(it.internalAvailableBytes) } ?: "--",
-      valueColor = colors.nominal,
-    )
   }
 }
 
@@ -497,7 +374,7 @@ private fun FavoriteShortcutsDashboardCard(
                 contentAlignment = Alignment.Center,
               ) {
                 Icon(
-                  imageVector = Icons.Default.Launch,
+                  imageVector = Icons.AutoMirrored.Filled.Launch,
                   contentDescription = null,
                   tint = Color(fav.accentColorArgb),
                   modifier = Modifier.size(15.dp),
@@ -531,22 +408,23 @@ private fun FavoriteShortcutsDashboardCard(
 private fun SystemToolsGrid(onNavigate: (String) -> Unit) {
   val tools = listOf(
     QuickToolTile(NexusRoutes.BATTERY, "Battery & Charging", "Current, health & timer", Icons.Default.BatteryChargingFull, "quick_battery"),
-    QuickToolTile(NexusRoutes.RAM, "RAM Manager", "Memory & cache trim", Icons.Default.Memory, "quick_ram"),
-    QuickToolTile(NexusRoutes.STORAGE, "Storage Manager", "Files, ZIP & cleanup", Icons.Default.FolderOpen, "quick_storage"),
+    QuickToolTile(NexusRoutes.APP_LOCK, "App Lock", "Pattern, PIN, Password & Guard", Icons.Default.Lock, "quick_app_lock"),
+    QuickToolTile(NexusRoutes.SECURE_VAULT, "Secure Vault", "AES-256-GCM files", Icons.Default.EnhancedEncryption, "quick_secure_vault"),
+    QuickToolTile(NexusRoutes.FLOATING_TOOLS, "Floating Tools", "Bubble, Apps & Browser", Icons.Default.BubbleChart, "quick_floating_tools"),
+    QuickToolTile(NexusRoutes.EDGE_PANEL, "Edge Panel", "Swipe handle & combos", Icons.AutoMirrored.Filled.ViewSidebar, "quick_edge_panel"),
+    QuickToolTile(NexusRoutes.GESTURE_STUDIO, "Gesture Studio", "Multi-touch & zones", Icons.Default.Gesture, "quick_gesture_studio"),
+    QuickToolTile(NexusRoutes.WIDGET_STUDIO, "Widget Studio", "Visual & HTML builder", Icons.Default.DesignServices, "quick_widget_studio"),
     QuickToolTile(NexusRoutes.MUSIC, "Music Player", "Offline audio & queue", Icons.Default.MusicNote, "quick_music"),
     QuickToolTile(NexusRoutes.VIDEO, "Video Player", "ExoPlayer, PiP & subs", Icons.Default.VideoLibrary, "quick_video"),
     QuickToolTile(NexusRoutes.SOUND_BOOSTER, "Sound Booster", "Hardware EQ & bass", Icons.Default.Equalizer, "quick_sound_booster"),
     QuickToolTile(NexusRoutes.WALLPAPER, "Live Wallpaper", "Video, photo & GIF studio", Icons.Default.Wallpaper, "quick_wallpaper"),
     QuickToolTile(NexusRoutes.LAUNCHER, "Shortcut Studio", "Custom icons & pin", Icons.Default.RocketLaunch, "quick_launcher"),
-    QuickToolTile(NexusRoutes.WIDGET_STUDIO, "Widget Studio", "Visual & HTML builder", Icons.Default.DesignServices, "quick_widget_studio"),
     QuickToolTile(NexusRoutes.DEPTH_CLOCK, "Depth Clock", "Layered clock widgets", Icons.Default.AccessTime, "quick_depth_clock"),
     QuickToolTile(NexusRoutes.APP_MANAGER, "App Manager", "Packages & permissions", Icons.Default.Apps, "quick_app_manager"),
     QuickToolTile(NexusRoutes.NOTIFICATIONS, "Notifications", "Local history & filters", Icons.Default.Notifications, "quick_notifications"),
     QuickToolTile(NexusRoutes.RECORDER, "Screen Recorder", "MP4 capture & shot", Icons.Default.Videocam, "quick_recorder"),
     QuickToolTile(NexusRoutes.SHORTCUTS, "Quick Controls", "Brightness & settings", Icons.Default.SettingsApplications, "quick_controls"),
     QuickToolTile(NexusRoutes.HARDWARE, "Device Info", "SoC, screen & hardware", Icons.Default.PhoneAndroid, "quick_hardware"),
-    QuickToolTile(NexusRoutes.SENSORS, "Sensor Lab", "Live sensor waveforms", Icons.Default.Sensors, "quick_sensors"),
-    QuickToolTile(NexusRoutes.DISPLAY, "Display Tester", "Pixel & touch tests", Icons.Default.Monitor, "quick_display"),
     QuickToolTile(NexusRoutes.WIDGETS, "Home Widgets", "Pin 7 system widgets", Icons.Default.Widgets, "quick_widgets"),
   )
 
@@ -603,6 +481,84 @@ private fun SystemToolsGrid(onNavigate: (String) -> Unit) {
               Spacer(modifier = Modifier.weight(1f))
             }
           }
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun AdvancedSuiteSpotlightCard(onNavigate: (String) -> Unit) {
+  val colors = NexusThemeExtras.colors
+  val modules = listOf(
+    QuickToolTile(NexusRoutes.APP_LOCK, "App Lock", "Pattern, PIN & Guard", Icons.Default.Lock, "spotlight_app_lock"),
+    QuickToolTile(NexusRoutes.SECURE_VAULT, "Secure Vault", "AES-256-GCM Storage", Icons.Default.EnhancedEncryption, "spotlight_secure_vault"),
+    QuickToolTile(NexusRoutes.FLOATING_TOOLS, "Floating Tools", "Apps, Browser & Notes", Icons.Default.BubbleChart, "spotlight_floating_tools"),
+    QuickToolTile(NexusRoutes.EDGE_PANEL, "Edge Panel", "Side Handle & Combos", Icons.AutoMirrored.Filled.ViewSidebar, "spotlight_edge_panel"),
+    QuickToolTile(NexusRoutes.GESTURE_STUDIO, "Gestures", "Swipes & Zones", Icons.Default.Gesture, "spotlight_gesture_studio"),
+  )
+
+  NexusGlassCard(
+    accentHighlight = true,
+    testTag = "dashboard_advanced_suite_card",
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Column(modifier = Modifier.weight(1f)) {
+        Text("Advanced System Suite", style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
+        Text(
+          "App Lock, Secure Vault, Floating Window, Edge Panel & Gestures",
+          style = MaterialTheme.typography.bodySmall,
+          color = colors.textSecondary,
+        )
+      }
+      StatusPill("${modules.size} MODULES", colors.accent)
+    }
+    Spacer(modifier = Modifier.height(10.dp))
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .horizontalScroll(rememberScrollState()),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      modules.forEach { item ->
+        NexusGlassCard(
+          onClick = { onNavigate(item.route) },
+          modifier = Modifier.width(138.dp),
+          testTag = item.testTag,
+        ) {
+          Box(
+            modifier = Modifier
+              .size(30.dp)
+              .clip(RoundedCornerShape(8.dp))
+              .background(colors.accent.copy(alpha = 0.16f)),
+            contentAlignment = Alignment.Center,
+          ) {
+            Icon(
+              imageVector = item.icon,
+              contentDescription = item.title,
+              tint = colors.accent,
+              modifier = Modifier.size(17.dp),
+            )
+          }
+          Spacer(modifier = Modifier.height(6.dp))
+          Text(
+            text = item.title,
+            style = MaterialTheme.typography.titleSmall,
+            color = colors.textPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+          Text(
+            text = item.subtitle,
+            style = MaterialTheme.typography.labelSmall,
+            color = colors.textSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
         }
       }
     }

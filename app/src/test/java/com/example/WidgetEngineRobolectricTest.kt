@@ -19,13 +19,23 @@ import com.example.data.model.VisualElementKind
 import com.example.data.model.VisualWidgetElement
 import com.example.data.model.VisualWidgetSpec
 import com.example.di.NexusContainer
+import android.content.Intent
+import android.widget.FrameLayout
+import android.widget.TextClock
+import android.widget.ViewFlipper
+import com.example.widget.AnimatedWidgetEngine
 import com.example.widget.BuiltInWidgetStyleHelper
 import com.example.widget.NexusBatteryWidgetProvider
+import com.example.widget.NexusCustomWidgetProvider
+import com.example.widget.NexusDepthClockWidgetProvider
 import com.example.widget.NexusDeviceInfoWidgetProvider
 import com.example.widget.NexusFavoritesWidgetProvider
 import com.example.widget.NexusMusicWidgetProvider
 import com.example.widget.NexusSystemStatusWidgetProvider
+import com.example.widget.NexusWidgetAlarmScheduler
 import com.example.widget.NexusWidgetJsBridge
+import com.example.widget.NexusWidgetLiveTicker
+import com.example.widget.NexusWidgetRefreshReceiver
 import com.example.widget.WidgetBitmapRenderer
 import com.example.widget.WidgetSizePreset
 import com.example.widget.WidgetSizingEngine
@@ -309,5 +319,162 @@ class WidgetEngineRobolectricTest {
 
     prefs.resetBuiltInWidgetStyle("battery")
     assertFalse(prefs.getBuiltInWidgetStyle("battery").isCustomized)
+  }
+
+  @Test
+  fun `clock widget alarm aligns to exact minute boundary and providers inflate live TextClock cleanly`() = runBlocking {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val nowMs = 1_700_000_012_345L
+    val nextTrigger = NexusWidgetAlarmScheduler.computeNextTriggerMs(nowMs, intervalMinutes = 1)
+    assertEquals(((nowMs / 60_000L) + 1L) * 60_000L + 150L, nextTrigger)
+
+    NexusWidgetLiveTicker.ensureRegistered(context)
+    assertTrue(NexusWidgetLiveTicker.isRegistered())
+
+    NexusWidgetRefreshReceiver().onReceive(context, Intent(NexusWidgetAlarmScheduler.ACTION_PERIODIC_WIDGET_REFRESH))
+    NexusWidgetRefreshReceiver().onReceive(context, Intent(Intent.ACTION_TIME_CHANGED))
+
+    val mgr = AppWidgetManager.getInstance(context)
+    val prefs = NexusContainer.get(context).preferencesRepository
+    prefs.saveDepthClockJson(
+      WidgetClockSerializer.serializeDepthClock(
+        DepthClockConfig(mode = DepthClockMode.DIGITAL, showSeconds = false, showDate = true)
+      )
+    )
+    NexusDepthClockWidgetProvider.updateWidgets(context, mgr, intArrayOf(910))
+    prefs.saveDepthClockJson(
+      WidgetClockSerializer.serializeDepthClock(
+        DepthClockConfig(mode = DepthClockMode.DUAL, showSeconds = true, showDate = true)
+      )
+    )
+    NexusDepthClockWidgetProvider.updateWidgets(context, mgr, intArrayOf(911))
+
+    // Verify custom Visual Clock widget inflates live TextClock without ActionException
+    val db = NexusContainer.get(context).database
+    val clockSpec = VisualWidgetSpec(
+      sizePresetName = WidgetSizePreset.MEDIUM.name,
+      targetWidthDp = 328,
+      targetHeightDp = 160,
+      enableAnimation = false,
+      elements = listOf(
+        VisualWidgetElement(
+          id = "live_clk",
+          kind = VisualElementKind.CLOCK,
+          xFraction = 0.05f,
+          yFraction = 0.15f,
+          widthFraction = 0.90f,
+          heightFraction = 0.45f,
+          fontSizeSp = 36f,
+          alignment = 1,
+        ),
+        VisualWidgetElement(
+          id = "live_dt",
+          kind = VisualElementKind.DATE,
+          xFraction = 0.05f,
+          yFraction = 0.65f,
+          widthFraction = 0.90f,
+          heightFraction = 0.25f,
+          fontSizeSp = 14f,
+          alignment = 1,
+        ),
+      ),
+    )
+    val serializedClock = WidgetClockSerializer.serializeVisualWidget(clockSpec)
+    val projId = db.customWidgetDao().insert(
+      WidgetProjectEntity(
+        name = "Live TextClock Widget",
+        kind = "VISUAL",
+        visualJson = serializedClock,
+        isActiveHomeWidget = true,
+      )
+    )
+    db.widgetInstanceDao().upsert(WidgetInstanceEntity(appWidgetId = 912, projectId = projId, widthDp = 328, heightDp = 160))
+    NexusCustomWidgetProvider.updateWidgets(context, mgr, intArrayOf(912))
+
+    // Verify serializer preserves animation flags cleanly
+    val roundTrip = WidgetClockSerializer.deserializeVisualWidget(
+      WidgetClockSerializer.serializeVisualWidget(clockSpec.copy(enableAnimation = true, animationFrameMs = 140))
+    )
+    assertTrue(roundTrip.enableAnimation)
+    assertEquals(140, roundTrip.animationFrameMs)
+
+    db.widgetInstanceDao().deleteByWidgetId(912)
+    db.customWidgetDao().deleteById(projId)
+  }
+
+  @Test
+  fun `animated widget engine detects animated html and gifs and inflates ViewFlipper cleanly`() = runBlocking {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    assertTrue(AnimatedWidgetEngine.detectAnimatedHtml("", "@keyframes pulse { 0% { opacity: 0; } }", ""))
+    assertTrue(AnimatedWidgetEngine.detectAnimatedHtml("<canvas id='c'></canvas>", "", "requestAnimationFrame(draw);"))
+    assertFalse(AnimatedWidgetEngine.detectAnimatedHtml("<div>Static</div>", ".card { color: red; }", "var x = 1;"))
+
+    // Build minimal valid 2-frame GIF89a image
+    val gifBytes = byteArrayOf(
+      0x47, 0x49, 0x46, 0x38, 0x39, 0x61, // GIF89a
+      0x02, 0x00, 0x02, 0x00, // 2x2
+      0x80.toByte(), 0x00, 0x00, // GCT flag, 2 colors
+      0x00, 0x00, 0x00, // black
+      0xFF.toByte(), 0x00, 0x00, // red
+      0x21, 0xFF.toByte(), 0x0B, // NETSCAPE2.0 loop extension
+      0x4E, 0x45, 0x54, 0x53, 0x43, 0x41, 0x50, 0x45, 0x32, 0x2E, 0x30,
+      0x03, 0x01, 0x00, 0x00, 0x00,
+      0x21, 0xF9.toByte(), 0x04, 0x04, 0x0F, 0x00, 0x00, 0x00, // GCE frame 1 (150ms)
+      0x2C, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x02, 0x00, 0x00,
+      0x02, 0x02, 0x84.toByte(), 0x51, 0x00,
+      0x21, 0xF9.toByte(), 0x04, 0x04, 0x0F, 0x00, 0x00, 0x00, // GCE frame 2 (150ms)
+      0x2C, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x02, 0x00, 0x00,
+      0x02, 0x02, 0x8C.toByte(), 0x51, 0x00,
+      0x3B, // trailer
+    )
+    val gifFile = File(context.cacheDir, "anim_test.gif").apply { writeBytes(gifBytes) }
+    try {
+      assertTrue(AnimatedWidgetEngine.isAnimatedGifFile(gifFile.absolutePath))
+      val rv = RemoteViews(context.packageName, R.layout.widget_custom_studio)
+      val f0 = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
+      val f1 = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
+      val inlinePaths = AnimatedWidgetEngine.deliverAnimatedFrames(
+        context = context,
+        views = rv,
+        flipperViewId = R.id.widget_custom_flipper,
+        frames = listOf(f0, f1),
+        frameIntervalMs = 150,
+        cacheKey = "anim_unit_test",
+      )
+      f0.recycle()
+      f1.recycle()
+      assertEquals(0, inlinePaths.size)
+
+      // Inflate RemoteViews into a host ViewGroup to verify ViewFlipper & TextClock actions are valid
+      val host = FrameLayout(context)
+      val inflated = rv.apply(context, host)
+      val flipper = inflated.findViewById<ViewFlipper>(R.id.widget_custom_flipper)
+      val textClock = inflated.findViewById<TextClock>(R.id.widget_custom_live_clock_bold)
+      assertNotNull(flipper)
+      assertNotNull(textClock)
+      assertEquals(2, flipper.childCount)
+
+      // Also verify large HD frames spill cleanly to disk FileProvider URIs
+      val rvHd = RemoteViews(context.packageName, R.layout.widget_custom_studio)
+      val hd0 = Bitmap.createBitmap(480, 480, Bitmap.Config.ARGB_8888)
+      val hd1 = Bitmap.createBitmap(480, 480, Bitmap.Config.ARGB_8888)
+      val uriPaths = AnimatedWidgetEngine.deliverAnimatedFrames(
+        context = context,
+        views = rvHd,
+        flipperViewId = R.id.widget_custom_flipper,
+        frames = listOf(hd0, hd1),
+        frameIntervalMs = 150,
+        cacheKey = "anim_hd_test",
+      )
+      hd0.recycle()
+      hd1.recycle()
+      assertEquals(2, uriPaths.size)
+      assertTrue(uriPaths.all { File(it).exists() })
+
+      WidgetSizingEngine.deleteCachedRendersForKey(context, "anim_unit_test")
+      WidgetSizingEngine.deleteCachedRendersForKey(context, "anim_hd_test")
+    } finally {
+      gifFile.delete()
+    }
   }
 }

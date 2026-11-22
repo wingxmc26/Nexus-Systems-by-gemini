@@ -10,4 +10,6 @@
     <string name="widget_custom_studio_label">Nexus Custom Studio Widget</string>
     <string name="widget_depth_clock_label">Nexus Depth Clock</string>
     <string name="widget_music_label">Nexus Music Player</string>
+    <string name="accessibility_service_label">Nexus Optional Assistant Service</string>
+    <string name="accessibility_service_description">Optional NEXUS SYSTEM service used only when you explicitly enable global gesture actions (Back, Home, Recents, Notifications) or best-effort external App Lock detection. Reads no screen text or passwords.</string>
 </resources>

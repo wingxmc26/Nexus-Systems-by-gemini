@@ -14,8 +14,6 @@ enum class DashboardModuleId(
   val subtitle: String,
 ) {
   BATTERY_CARD("battery_card", "Battery & Charging", "Level, current, temperature & session timer"),
-  RAM_CARD("ram_card", "RAM Usage", "Active memory consumption & available RAM"),
-  STORAGE_CARD("storage_card", "Storage Usage", "Internal storage capacity & free space"),
   DEVICE_OVERVIEW("device_overview", "Device Information", "Model, Android version, display & processor"),
   FAVORITE_SHORTCUTS("favorite_shortcuts", "Favorite Shortcuts", "Pinned launchable apps & activities"),
   QUICK_MODULES("quick_modules", "System Suite", "Organized access to all Nexus System modules");
@@ -404,7 +402,9 @@ data class VisualWidgetSpec(
   val targetWidthDp: Int = 328,
   val targetHeightDp: Int = 160,
   val containerPaddingDp: Int = 12,
-  val refreshIntervalMinutes: Int = 15,
+  val refreshIntervalMinutes: Int = 1,
+  val enableAnimation: Boolean = false,
+  val animationFrameMs: Int = 180,
   val elements: List<VisualWidgetElement> = emptyList(),
 )
 

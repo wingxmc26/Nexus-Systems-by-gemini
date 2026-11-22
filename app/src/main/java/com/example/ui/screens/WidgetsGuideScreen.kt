@@ -4,6 +4,8 @@ import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,9 +46,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,6 +64,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.MainActivity
 import com.example.data.model.BuiltInWidgetStyleConfig
 import com.example.di.NexusContainer
@@ -76,6 +81,11 @@ import com.example.widget.NexusFavoritesWidgetProvider
 import com.example.widget.NexusMusicWidgetProvider
 import com.example.widget.NexusSystemStatusWidgetProvider
 import com.example.widget.NexusWidgetUpdater
+import com.example.widget.engine.CapabilityStatus
+import com.example.widget.engine.DiagnosticSeverity
+import com.example.widget.engine.WidgetCapability
+import com.example.widget.engine.WidgetDiagnosticCenter
+import com.example.widget.engine.WidgetEngineRegistry
 import kotlinx.coroutines.launch
 
 private data class HomeWidgetSpec(
@@ -120,14 +130,26 @@ fun WidgetsGuideScreen(
   val colors = NexusThemeExtras.colors
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
-  val prefsRepo = remember(context) { NexusContainer.get(context).preferencesRepository }
+  val container = remember(context) { NexusContainer.get(context) }
+  val prefsRepo = container.preferencesRepository
+  val coordinator = container.widgetDataHub.permissionCoordinator
   val appWidgetManager = remember(context) { runCatching { AppWidgetManager.getInstance(context) }.getOrNull() }
   val canRequestPin = remember(appWidgetManager) {
     runCatching { appWidgetManager?.isRequestPinAppWidgetSupported == true }.getOrDefault(false)
   }
   var feedbackText by remember { mutableStateOf<String?>(null) }
   var expandedCustomizerId by remember { mutableStateOf<String?>(null) }
+  var showEngineDetails by remember { mutableStateOf(false) }
+  var capabilityRefreshTick by remember { mutableIntStateOf(0) }
+  val diagnosticEntries by WidgetDiagnosticCenter.entries.collectAsStateWithLifecycle()
   val styleConfigs = remember { mutableStateMapOf<String, BuiltInWidgetStyleConfig>() }
+
+  val runtimePermLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestMultiplePermissions(),
+  ) {
+    capabilityRefreshTick++
+    scope.launch { NexusWidgetUpdater.refreshAll(context) }
+  }
 
   val widgets = remember {
     listOf(
@@ -255,6 +277,7 @@ fun WidgetsGuideScreen(
             onClick = {
               scope.launch {
                 NexusWidgetUpdater.refreshAll(context)
+                capabilityRefreshTick++
                 feedbackText = "All widget providers refreshed."
               }
             },
@@ -263,6 +286,100 @@ fun WidgetsGuideScreen(
             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text("Refresh Placed Widgets Now")
+          }
+        }
+      }
+
+      item {
+        val activeTotal = remember(capabilityRefreshTick) { WidgetEngineRegistry.activeWidgetCount(context) }
+        val keyCaps = remember(capabilityRefreshTick) {
+          listOf(
+            WidgetCapability.MEDIA_SESSION,
+            WidgetCapability.CALENDAR,
+            WidgetCapability.LOCATION_WEATHER,
+            WidgetCapability.NETWORK,
+          ).map { it to coordinator.statusFor(it) }
+        }
+        NexusGlassCard(testTag = "widget_engine_status_card") {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+          ) {
+            Column(modifier = Modifier.weight(1f)) {
+              SectionHeader(title = "Widget Engine & Capabilities")
+              Text(
+                text = "$activeTotal active home-screen slots • ${diagnosticEntries.size} engine logs",
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.textSecondary,
+              )
+            }
+            TextButton(onClick = { showEngineDetails = !showEngineDetails }) {
+              Text(if (showEngineDetails) "Hide" else "Inspect")
+            }
+          }
+          if (showEngineDetails) {
+            Spacer(modifier = Modifier.height(6.dp))
+            keyCaps.forEach { (cap, status) ->
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+              ) {
+                Column(modifier = Modifier.weight(1f)) {
+                  Text(cap.displayName, style = MaterialTheme.typography.labelLarge, color = colors.textPrimary)
+                  Text(cap.explanation, style = MaterialTheme.typography.labelSmall, color = colors.textSecondary)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                if (status == CapabilityStatus.GRANTED) {
+                  StatusPill(text = "Granted", color = colors.nominal)
+                } else {
+                  OutlinedButton(
+                    onClick = {
+                      val perms = coordinator.requiredRuntimePermissions(cap)
+                      if (perms.isNotEmpty()) {
+                        runtimePermLauncher.launch(perms.toTypedArray())
+                      } else {
+                        coordinator.buildActionableIntent(cap)?.let { intent ->
+                          runCatching { context.startActivity(intent) }
+                        }
+                      }
+                    },
+                    modifier = Modifier.testTag("grant_capability_${cap.id}"),
+                  ) {
+                    Text(if (status == CapabilityStatus.MISSING_SPECIAL_SETTINGS) "Settings" else "Grant")
+                  }
+                }
+              }
+            }
+            if (diagnosticEntries.isNotEmpty()) {
+              Spacer(modifier = Modifier.height(8.dp))
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+              ) {
+                Text("Recent Widget Engine Diagnostics", style = MaterialTheme.typography.labelMedium, color = colors.textPrimary)
+                TextButton(onClick = { WidgetDiagnosticCenter.clear() }) {
+                  Text("Clear")
+                }
+              }
+              diagnosticEntries.take(6).forEach { entry ->
+                val badgeColor = when (entry.severity) {
+                  DiagnosticSeverity.ERROR -> colors.accent
+                  DiagnosticSeverity.WARN -> colors.warning
+                  DiagnosticSeverity.INFO -> colors.accentSecondary
+                }
+                Text(
+                  text = "[${entry.category}] ${entry.message}",
+                  style = MaterialTheme.typography.labelSmall,
+                  color = badgeColor,
+                  modifier = Modifier.padding(vertical = 2.dp),
+                )
+              }
+            }
           }
         }
       }

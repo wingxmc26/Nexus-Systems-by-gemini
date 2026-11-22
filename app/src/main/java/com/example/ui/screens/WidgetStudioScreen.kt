@@ -2,6 +2,10 @@ package com.example.ui.screens
 
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.webkit.WebView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -56,6 +60,8 @@ import com.example.ui.components.StatusPill
 import com.example.ui.theme.NexusThemeExtras
 import com.example.ui.viewmodel.WidgetStudioViewModel
 import com.example.widget.NexusCustomWidgetProvider
+import com.example.widget.NexusWidgetAlarmScheduler
+import kotlinx.coroutines.delay
 
 @Composable
 fun WidgetStudioScreen(
@@ -75,6 +81,13 @@ fun WidgetStudioScreen(
     if (pendingWidgetId != null || pendingProjectId != null) {
       viewModel.openWidgetTarget(pendingWidgetId, pendingProjectId)
       onPendingTargetConsumed()
+    }
+  }
+
+  LaunchedEffect(Unit) {
+    while (true) {
+      delay(10_000L)
+      viewModel.refreshLiveValues()
     }
   }
 
@@ -216,6 +229,8 @@ fun WidgetStudioScreen(
             onSetCustomSize = viewModel::setCustomDimensions,
             onSetPadding = viewModel::setContainerPadding,
             onSetRefreshInterval = viewModel::setRefreshIntervalMinutes,
+            onToggleAnimation = viewModel::setAnimationEnabled,
+            onSetAnimationSpeed = viewModel::setAnimationFrameMs,
           )
         } else {
           HtmlWidgetEditorSection(
@@ -225,6 +240,8 @@ fun WidgetStudioScreen(
             spec = state.visualSpec,
             importedAssetNames = state.importedAssetNames,
             onToggleTransparent = viewModel::setHtmlTransparent,
+            onToggleAnimation = viewModel::setAnimationEnabled,
+            onSetAnimationSpeed = viewModel::setAnimationFrameMs,
             onSelectPreset = viewModel::selectWidgetSizePreset,
             onSetCustomSize = viewModel::setCustomDimensions,
             onSetRefreshInterval = viewModel::setRefreshIntervalMinutes,
@@ -299,6 +316,24 @@ fun WidgetStudioScreen(
           state.statusMessage?.let { msg ->
             Spacer(modifier = Modifier.height(6.dp))
             Text(msg, style = MaterialTheme.typography.bodyMedium, color = colors.nominal)
+          }
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !NexusWidgetAlarmScheduler.canScheduleExact(context)) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+              onClick = {
+                runCatching {
+                  context.startActivity(
+                    Intent(
+                      Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                      Uri.fromParts("package", context.packageName, null),
+                    )
+                  )
+                }
+              },
+              modifier = Modifier.fillMaxWidth(),
+            ) {
+              Text("Allow Exact Alarms for Live HTML/Clock Sync")
+            }
           }
         }
       }

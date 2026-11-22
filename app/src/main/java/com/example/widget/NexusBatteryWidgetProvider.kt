@@ -20,11 +20,17 @@ import kotlinx.coroutines.launch
 
 class NexusBatteryWidgetProvider : AppWidgetProvider() {
 
+  override fun onEnabled(context: Context) {
+    super.onEnabled(context)
+    NexusWidgetLiveTicker.ensureRegistered(context.applicationContext)
+  }
+
   override fun onUpdate(
     context: Context,
     appWidgetManager: AppWidgetManager,
     appWidgetIds: IntArray,
   ) {
+    NexusWidgetLiveTicker.ensureRegistered(context.applicationContext)
     val pendingResult = goAsync()
     CoroutineScope(Dispatchers.IO).launch {
       try {
@@ -64,11 +70,10 @@ class NexusBatteryWidgetProvider : AppWidgetProvider() {
       )
 
       val container = runCatching { NexusContainer.get(context) }.getOrNull()
-      val battery = runCatching { container?.batteryDataSource?.readBatterySnapshot() }.getOrNull()
-      if (battery != null && container != null) {
-        runCatching { container.batterySessionRepository.processBatterySnapshot(battery) }
-      }
-      val activeSession = runCatching { container?.preferencesRepository?.getActiveChargingSessionSnapshot() }.getOrNull()
+      val batState = runCatching { container?.widgetDataHub?.batteryProvider?.fetch(context) }.getOrNull()
+      val chgState = runCatching { container?.widgetDataHub?.chargingProvider?.fetch(context) }.getOrNull()
+      val battery = (batState as? com.example.widget.engine.WidgetDataState.Available)?.data
+      val activeSession = (chgState as? com.example.widget.engine.WidgetDataState.Available)?.data?.activeSession
       val style = runCatching {
         container?.preferencesRepository?.getBuiltInWidgetStyle(WIDGET_STYLE_KEY)
       }.getOrNull() ?: BuiltInWidgetStyleConfig()

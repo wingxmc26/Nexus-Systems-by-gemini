@@ -21,6 +21,15 @@
         android:orientation="horizontal"
         android:padding="12dp">
 
+        <ImageView
+            android:id="@+id/widget_music_artwork"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:layout_marginEnd="10dp"
+            android:contentDescription="@null"
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
+
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -31,6 +40,8 @@
                 android:id="@+id/widget_music_badge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
                 android:text="NEXUS AUDIO"
                 android:textColor="#FFE11D48"
                 android:textSize="10sp"
@@ -53,9 +64,33 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:text="Open Music Player to play local audio"
+                android:text="Play Spotify, YT Music, or Nexus Audio"
                 android:textColor="#FF9CA3AF"
                 android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/widget_music_time"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text=""
+                android:textColor="#FF9CA3AF"
+                android:textSize="10sp"
+                android:visibility="gone" />
+
+            <ProgressBar
+                android:id="@+id/widget_music_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:layout_marginTop="4dp"
+                android:max="100"
+                android:progress="0"
+                android:progressBackgroundTint="#33FFFFFF"
+                android:progressTint="#FFE11D48"
+                android:visibility="gone" />
         </LinearLayout>
 
         <TextView

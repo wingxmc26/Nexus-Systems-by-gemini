@@ -12,6 +12,102 @@
         android:contentDescription="Nexus Depth Clock Widget"
         android:scaleType="fitCenter" />
 
+    <!-- Native launcher-ticked TextClock overlay for real-time zero-freeze updates -->
+    <LinearLayout
+        android:id="@+id/widget_clock_live_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextClock
+            android:id="@+id/widget_clock_live_date"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:format12Hour="EEEE, MMMM d"
+            android:format24Hour="EEEE, MMMM d"
+            android:gravity="center"
+            android:maxLines="1"
+            android:textAllCaps="true"
+            android:textColor="#FFE11D48"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextClock
+            android:id="@+id/widget_clock_live_time_bold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif"
+            android:format12Hour="hh:mm"
+            android:format24Hour="HH:mm"
+            android:gravity="center"
+            android:maxLines="1"
+            android:shadowColor="#70000000"
+            android:shadowDy="3"
+            android:shadowRadius="8"
+            android:textColor="#FFFFFFFF"
+            android:textSize="48sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextClock
+            android:id="@+id/widget_clock_live_time_light"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-light"
+            android:format12Hour="hh:mm"
+            android:format24Hour="HH:mm"
+            android:gravity="center"
+            android:maxLines="1"
+            android:shadowColor="#70000000"
+            android:shadowDy="3"
+            android:shadowRadius="8"
+            android:textColor="#FFFFFFFF"
+            android:textSize="48sp"
+            android:textStyle="normal"
+            android:visibility="gone" />
+
+        <TextClock
+            android:id="@+id/widget_clock_live_time_serif"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:fontFamily="serif"
+            android:format12Hour="hh:mm"
+            android:format24Hour="HH:mm"
+            android:gravity="center"
+            android:maxLines="1"
+            android:shadowColor="#70000000"
+            android:shadowDy="3"
+            android:shadowRadius="8"
+            android:textColor="#FFFFFFFF"
+            android:textSize="48sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextClock
+            android:id="@+id/widget_clock_live_time_condensed"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-condensed"
+            android:format12Hour="hh:mm"
+            android:format24Hour="HH:mm"
+            android:gravity="center"
+            android:maxLines="1"
+            android:shadowColor="#70000000"
+            android:shadowDy="3"
+            android:shadowRadius="8"
+            android:textColor="#FFFFFFFF"
+            android:textSize="48sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
+
     <TextView
         android:id="@+id/widget_clock_fallback"
         android:layout_width="match_parent"

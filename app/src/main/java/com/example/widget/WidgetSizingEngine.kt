@@ -28,6 +28,7 @@ enum class WidgetSizePreset(
   WIDE("Extra-Large Wide", 360, 108, "4×1 Full-Width"),
   TALL("Tall 2×4", 164, 328, "2×4 Vertical"),
   IOS_LARGE_CLOCK("iOS Large Clock", 336, 336, "4×4 Depth Clock"),
+  AUTO("Auto-Fit Slot", 328, 160, "Matches Launcher Bounds"),
   CUSTOM("Custom DP", 328, 220, "Manual W × H dp");
 
   companion object {

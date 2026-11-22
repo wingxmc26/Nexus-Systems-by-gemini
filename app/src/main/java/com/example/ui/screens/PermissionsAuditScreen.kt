@@ -147,10 +147,11 @@ fun PermissionsAuditScreen(
             Button(
               onClick = {
                 when (entry.id) {
-                  "all_files" -> runCatching { context.startActivity(pm.buildAllFilesAccessIntent()) }
                   "notification_access" -> runCatching { context.startActivity(pm.buildNotificationAccessIntent()) }
                   "write_settings" -> runCatching { context.startActivity(pm.buildWriteSettingsIntent()) }
                   "usage_stats" -> runCatching { context.startActivity(pm.buildUsageStatsIntent()) }
+                  "overlay" -> runCatching { context.startActivity(pm.buildOverlayIntent()) }
+                  "accessibility" -> runCatching { context.startActivity(pm.buildAccessibilitySettingsIntent()) }
                   "audio_media" -> runtimeLauncher.launch(pm.audioMediaPermissionName())
                   "video_media" -> runtimeLauncher.launch(pm.videoMediaPermissionName())
                   "record_audio" -> runtimeLauncher.launch(Manifest.permission.RECORD_AUDIO)

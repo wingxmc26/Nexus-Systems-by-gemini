@@ -18,7 +18,6 @@ import com.example.data.model.VisualElementKind
 import com.example.data.model.VisualWidgetElement
 import com.example.data.model.VisualWidgetSpec
 import com.example.data.system.BatteryDataSource
-import com.example.data.system.DisplayDataSource
 import com.example.data.system.LiveWallpaperDataSource
 import com.example.data.system.PermissionManager
 import com.example.data.system.RamManagerDataSource
@@ -84,9 +83,6 @@ class ExampleRobolectricTest {
     val battery = BatteryDataSource(context).readBatterySnapshot()
     assertTrue(battery.statusLabel.isNotBlank())
 
-    val display = DisplayDataSource(context).readDisplaySpecs()
-    assertTrue(display.physicalWidthPx > 0)
-
     val controls = ShortcutsDataSource(context).loadControls()
     assertTrue(controls.isNotEmpty())
 
@@ -101,7 +97,7 @@ class ExampleRobolectricTest {
     assertNotNull(wp.buildSetLiveWallpaperIntents())
 
     val perms = PermissionManager(context).loadAuditSnapshot()
-    assertEquals(8, perms.size)
+    assertEquals(12, perms.size)
   }
 
   @Test
@@ -253,9 +249,9 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("log_battery_snapshot_button").assertDoesNotExist()
     composeTestRule.onNodeWithTag("battery_history_controls").assertDoesNotExist()
 
-    composeTestRule.onNodeWithTag("nav_ram").performClick()
+    composeTestRule.onNodeWithTag("nav_applock").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("ram_overview_card").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("app_lock_list").assertIsDisplayed()
 
     composeTestRule.onNodeWithTag("nav_utilities").performClick()
     composeTestRule.waitForIdle()

@@ -7,6 +7,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.example.data.local.NotificationHistoryEntity
 import com.example.di.NexusContainer
+import com.example.widget.engine.WidgetMediaSessionHub
 import java.lang.ref.WeakReference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,9 +41,11 @@ class NexusNotificationListenerService : NotificationListenerService() {
     super.onListenerConnected()
     serviceRef = WeakReference(this)
     _isConnected.value = true
+    WidgetMediaSessionHub.attachSessionObserver(applicationContext)
   }
 
   override fun onListenerDisconnected() {
+    WidgetMediaSessionHub.detachSessionObserver(applicationContext)
     _isConnected.value = false
     serviceRef = null
     super.onListenerDisconnected()
@@ -50,6 +53,7 @@ class NexusNotificationListenerService : NotificationListenerService() {
 
   override fun onBind(intent: Intent?): IBinder? {
     serviceRef = WeakReference(this)
+    WidgetMediaSessionHub.attachSessionObserver(applicationContext)
     return super.onBind(intent)
   }
 
@@ -101,6 +105,7 @@ class NexusNotificationListenerService : NotificationListenerService() {
   }
 
   override fun onDestroy() {
+    WidgetMediaSessionHub.detachSessionObserver(applicationContext)
     _isConnected.value = false
     serviceRef = null
     serviceScope.cancel()

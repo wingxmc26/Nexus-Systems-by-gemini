@@ -38,31 +38,49 @@ import kotlin.math.sin
 object WidgetBitmapRenderer {
 
   suspend fun buildLiveValuesMap(context: Context): Map<VisualElementKind, String> {
-    val container = NexusContainer.get(context)
-    val battery = container.batteryDataSource.readBatterySnapshot()
-    val mem = container.ramManagerDataSource.readSystemMemoryDetails()
-    val storage = container.storageDataSource.readStorageOverview()
-    val music = container.preferencesRepository.getLastMusicPlaybackSnapshot()
-    val now = Date()
+    val hub = NexusContainer.get(context).widgetDataHub
+    val time = (hub.timeProvider.fetch(context) as? com.example.widget.engine.WidgetDataState.Available)?.data
+    val battery = (hub.batteryProvider.fetch(context) as? com.example.widget.engine.WidgetDataState.Available)?.data
+    val mem = (hub.memoryProvider.fetch(context) as? com.example.widget.engine.WidgetDataState.Available)?.data
+    val storage = (hub.storageProvider.fetch(context) as? com.example.widget.engine.WidgetDataState.Available)?.data
+    val device = (hub.deviceProvider.fetch(context) as? com.example.widget.engine.WidgetDataState.Available)?.data
+    val mediaState = hub.mediaProvider.fetch(context)
 
-    val batPct = (battery.percentage as? MetricValue.Available)?.value?.let { "$it%" } ?: "N/A"
-    val temp = (battery.temperatureCelsius as? MetricValue.Available)?.value
+    val batPct = (battery?.percentage as? MetricValue.Available)?.value?.let { "$it%" } ?: "N/A"
+    val temp = (battery?.temperatureCelsius as? MetricValue.Available)?.value
       ?.let { String.format(Locale.US, "%.1f°C", it) } ?: ""
-    val chargeText = if (battery.isCharging) {
+    val chargeText = if (battery?.isCharging == true) {
       "Charging (${battery.chargeSource})"
-    } else {
+    } else if (battery != null) {
       "${battery.statusLabel} $temp".trim()
+    } else {
+      "Battery"
+    }
+
+    val musicText = when (mediaState) {
+      is com.example.widget.engine.WidgetDataState.Available ->
+        if (mediaState.data.hasActiveSession) "${mediaState.data.title} — ${mediaState.data.artist}"
+        else "No active playback"
+      is com.example.widget.engine.WidgetDataState.PermissionRequired -> "Grant Notification Access"
+      else -> "Media unavailable"
+    }
+
+    val now = Date()
+    val clockDisplay = if (time != null) {
+      if (time.is24HourFormat) time.time24 else time.time12
+    } else {
+      SimpleDateFormat("HH:mm", Locale.getDefault()).format(now)
     }
 
     return mapOf(
-      VisualElementKind.CLOCK to SimpleDateFormat("HH:mm", Locale.getDefault()).format(now),
-      VisualElementKind.DATE to SimpleDateFormat("EEE, MMM dd", Locale.getDefault()).format(now),
+      VisualElementKind.CLOCK to clockDisplay,
+      VisualElementKind.DATE to (time?.dateShort ?: SimpleDateFormat("EEE, MMM dd", Locale.getDefault()).format(now)),
       VisualElementKind.BATTERY to "Battery $batPct",
       VisualElementKind.CHARGING to chargeText,
-      VisualElementKind.RAM to "RAM ${mem.usagePercent.toInt()}% (${Formatters.formatBytes(mem.availableRamBytes)} free)",
-      VisualElementKind.STORAGE to "Free ${Formatters.formatBytes(storage.internalAvailableBytes)}",
-      VisualElementKind.DEVICE to "${Build.MANUFACTURER} ${Build.MODEL}",
-      VisualElementKind.MUSIC to "${music.first} — ${music.second}",
+      VisualElementKind.RAM to if (mem != null) "RAM ${mem.usagePercent.toInt()}% (${Formatters.formatBytes(mem.availableRamBytes)} free)" else "RAM --",
+      VisualElementKind.STORAGE to if (storage != null) "Free ${Formatters.formatBytes(storage.internalAvailableBytes)}" else "Storage --",
+      VisualElementKind.DEVICE to if (device != null) "${device.manufacturer} ${device.model}" else "${Build.MANUFACTURER} ${Build.MODEL}",
+      VisualElementKind.MUSIC to musicText,
       VisualElementKind.ICON to "◈",
     )
   }
@@ -77,6 +95,8 @@ object WidgetBitmapRenderer {
     widthDp: Int = spec.targetWidthDp,
     heightDp: Int = spec.targetHeightDp,
     density: Float = 2.75f,
+    skipTextKinds: Set<VisualElementKind> = emptySet(),
+    overrideImageBitmaps: Map<String, Bitmap> = emptyMap(),
   ): Bitmap {
     val px = WidgetSizingEngine.computeRenderPixels(widthDp, heightDp, density)
     return renderVisualWidgetBitmapInternal(
@@ -87,6 +107,8 @@ object WidgetBitmapRenderer {
       designWidthDp = widthDp.toFloat().coerceAtLeast(72f),
       designHeightDp = heightDp.toFloat().coerceAtLeast(56f),
       pxPerDp = px.effectiveScale,
+      skipTextKinds = skipTextKinds,
+      overrideImageBitmaps = overrideImageBitmaps,
     )
   }
 
@@ -124,6 +146,8 @@ object WidgetBitmapRenderer {
     designWidthDp: Float,
     designHeightDp: Float,
     pxPerDp: Float,
+    skipTextKinds: Set<VisualElementKind> = emptySet(),
+    overrideImageBitmaps: Map<String, Bitmap> = emptyMap(),
   ): Bitmap {
     val bmp = Bitmap.createBitmap(canvasW, canvasH, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bmp)
@@ -193,6 +217,8 @@ object WidgetBitmapRenderer {
         innerW = innerW,
         innerH = innerH,
         pxPerDp = pxPerDp * resizeRatio,
+        skipText = el.kind in skipTextKinds && el.label.isBlank(),
+        overrideImage = overrideImageBitmaps[el.id],
       )
     }
     return bmp
@@ -207,6 +233,8 @@ object WidgetBitmapRenderer {
     innerW: Float,
     innerH: Float,
     pxPerDp: Float,
+    skipText: Boolean = false,
+    overrideImage: Bitmap? = null,
   ) {
     val left = innerLeft + el.xFraction.coerceIn(0f, 0.96f) * innerW
     val top = innerTop + el.yFraction.coerceIn(0f, 0.96f) * innerH
@@ -222,20 +250,30 @@ object WidgetBitmapRenderer {
       canvas.drawRoundRect(bounds, elemRadius, elemRadius, bgPaint)
     }
 
-    if (el.kind == VisualElementKind.IMAGE && !el.imageUriOrPath.isNullOrBlank()) {
-      val f = File(el.imageUriOrPath)
-      if (f.exists()) {
-        NexusBitmapUtils.decodeSampledBitmap(f.absolutePath, w.roundToInt(), h.roundToInt())?.let { img ->
-          val save = canvas.save()
-          val path = Path().apply { addRoundRect(bounds, elemRadius, elemRadius, Path.Direction.CW) }
-          canvas.clipPath(path)
-          drawCenterCrop(canvas, img, bounds)
-          canvas.restoreToCount(save)
-          img.recycle()
+    if (el.kind == VisualElementKind.IMAGE && (overrideImage != null || !el.imageUriOrPath.isNullOrBlank())) {
+      if (overrideImage != null && !overrideImage.isRecycled) {
+        val save = canvas.save()
+        val path = Path().apply { addRoundRect(bounds, elemRadius, elemRadius, Path.Direction.CW) }
+        canvas.clipPath(path)
+        drawCenterCrop(canvas, overrideImage, bounds)
+        canvas.restoreToCount(save)
+      } else {
+        val f = el.imageUriOrPath?.let { File(it) }
+        if (f != null && f.exists()) {
+          NexusBitmapUtils.decodeSampledBitmap(f.absolutePath, w.roundToInt(), h.roundToInt())?.let { img ->
+            val save = canvas.save()
+            val path = Path().apply { addRoundRect(bounds, elemRadius, elemRadius, Path.Direction.CW) }
+            canvas.clipPath(path)
+            drawCenterCrop(canvas, img, bounds)
+            canvas.restoreToCount(save)
+            img.recycle()
+          }
         }
       }
       return
     }
+
+    if (skipText) return
 
     val resolvedText = when (el.kind) {
       VisualElementKind.TEXT -> el.label.ifBlank { "Custom Label" }
@@ -294,9 +332,10 @@ object WidgetBitmapRenderer {
     widthDp: Int = 336,
     heightDp: Int = 336,
     density: Float = 2.75f,
+    drawTextOverlay: Boolean = true,
   ): Bitmap {
     val px = WidgetSizingEngine.computeRenderPixels(widthDp, heightDp, density)
-    return renderDepthClockBitmap(config, px.widthPx, px.heightPx, px.effectiveScale)
+    return renderDepthClockBitmap(config, px.widthPx, px.heightPx, px.effectiveScale, drawTextOverlay)
   }
 
   fun renderDepthClockBitmap(
@@ -304,6 +343,7 @@ object WidgetBitmapRenderer {
     widthPx: Int = 440,
     heightPx: Int = 270,
     pxPerDpHint: Float? = null,
+    drawTextOverlay: Boolean = true,
   ): Bitmap {
     val maxBound = if (pxPerDpHint != null) 1440 else 480
     val safeW = widthPx.coerceIn(160, maxBound)
@@ -360,7 +400,7 @@ object WidgetBitmapRenderer {
       drawAnalogClock(canvas, cal, centerX, centerY, radius, config, scale)
     }
 
-    if (config.mode == DepthClockMode.DIGITAL || config.mode == DepthClockMode.DUAL) {
+    if (drawTextOverlay && (config.mode == DepthClockMode.DIGITAL || config.mode == DepthClockMode.DUAL)) {
       val pattern = when {
         config.use24Hour && config.showSeconds -> "HH:mm:ss"
         config.use24Hour -> "HH:mm"

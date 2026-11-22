@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,27 +11,31 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AssistChip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.ViewSidebar
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material.icons.filled.BubbleChart
 import androidx.compose.material.icons.filled.DesignServices
+import androidx.compose.material.icons.filled.EnhancedEncryption
 import androidx.compose.material.icons.filled.Equalizer
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.Monitor
+import androidx.compose.material.icons.filled.Gesture
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.SettingsApplications
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Videocam
@@ -77,9 +82,23 @@ fun UtilitiesHubScreen(
       header = "Device",
       entries = listOf(
         UtilityEntry(NexusRoutes.BATTERY, "Battery & Charging", "Live current (mA), charging timer, sessions & history", Icons.Default.BatteryChargingFull, "hub_battery"),
-        UtilityEntry(NexusRoutes.RAM, "RAM Manager", "Live memory pressure, processes & app cache/settings", Icons.Default.Memory, "hub_ram"),
         UtilityEntry(NexusRoutes.HARDWARE, "Device Information", "Manufacturer, Android version, processor, GPU & screen specs", Icons.Default.PhoneAndroid, "hub_hardware"),
         UtilityEntry(NexusRoutes.SHORTCUTS, "Quick System Controls", "Direct brightness, timeout & rotate plus settings shortcuts", Icons.Default.SettingsApplications, "hub_shortcuts"),
+      ),
+    ),
+    UtilityCategoryGroup(
+      header = "Privacy & Encryption",
+      entries = listOf(
+        UtilityEntry(NexusRoutes.APP_LOCK, "App Lock", "Pattern, PIN, Password, Biometric & Background Guard", Icons.Default.Lock, "hub_app_lock"),
+        UtilityEntry(NexusRoutes.SECURE_VAULT, "Secure Vault", "AES-256-GCM Keystore vault, folders & encrypted backup", Icons.Default.EnhancedEncryption, "hub_secure_vault"),
+      ),
+    ),
+    UtilityCategoryGroup(
+      header = "Floating, Edge & Gestures",
+      entries = listOf(
+        UtilityEntry(NexusRoutes.FLOATING_TOOLS, "Floating Tools", "Freeform Apps launcher, floating WebView browser, Notes & Calc", Icons.Default.BubbleChart, "hub_floating_tools"),
+        UtilityEntry(NexusRoutes.EDGE_PANEL, "Edge Panel", "Left/right swipe drawer with categories, favorites & combos", Icons.AutoMirrored.Filled.ViewSidebar, "hub_edge_panel"),
+        UtilityEntry(NexusRoutes.GESTURE_STUDIO, "Gesture Studio", "Swipes, double-tap, long-press, 2-finger & zones", Icons.Default.Gesture, "hub_gesture_studio"),
       ),
     ),
     UtilityCategoryGroup(
@@ -87,7 +106,7 @@ fun UtilitiesHubScreen(
       entries = listOf(
         UtilityEntry(NexusRoutes.WALLPAPER, "Live Wallpaper Studio", "Video, image & GIF library with crop, speed & apply", Icons.Default.Wallpaper, "hub_wallpaper"),
         UtilityEntry(NexusRoutes.LAUNCHER, "Shortcut Studio", "Custom app icons, shapes, activity inspection & pinning", Icons.Default.RocketLaunch, "hub_launcher"),
-        UtilityEntry(NexusRoutes.WIDGET_STUDIO, "Widget Studio", "Visual drag canvas, HTML/CSS/JS widgets & home pinning", Icons.Default.DesignServices, "hub_widget_studio"),
+        UtilityEntry(NexusRoutes.WIDGET_STUDIO, "Widget Studio", "Visual drag canvas, HTML/CSS/JS widgets & Auto-Fit DP", Icons.Default.DesignServices, "hub_widget_studio"),
         UtilityEntry(NexusRoutes.DEPTH_CLOCK, "Depth Clock Studio", "Digital/Analog layered clock widget with custom art", Icons.Default.AccessTime, "hub_depth_clock"),
       ),
     ),
@@ -100,24 +119,24 @@ fun UtilitiesHubScreen(
       ),
     ),
     UtilityCategoryGroup(
-      header = "Management",
+      header = "Management & Tools",
       entries = listOf(
-        UtilityEntry(NexusRoutes.STORAGE, "Storage Manager", "SAF analyzer, duplicates & direct file/ZIP browser", Icons.Default.FolderOpen, "hub_storage"),
         UtilityEntry(NexusRoutes.APP_MANAGER, "Advanced App Manager", "Packages, permissions, APK sizes & optional usage stats", Icons.Default.Apps, "hub_app_manager"),
         UtilityEntry(NexusRoutes.NOTIFICATIONS, "Notification Studio", "Local notification history, filters, pinning & dismiss", Icons.Default.Notifications, "hub_notifications"),
-      ),
-    ),
-    UtilityCategoryGroup(
-      header = "Tools",
-      entries = listOf(
         UtilityEntry(NexusRoutes.RECORDER, "Screen Recorder Studio", "MP4 screen capture, screenshots & mic narration", Icons.Default.Videocam, "hub_recorder"),
-        UtilityEntry(NexusRoutes.SENSORS, "Sensor Lab", "Live waveforms, compass, tilt level & sensor availability", Icons.Default.Sensors, "hub_sensors"),
-        UtilityEntry(NexusRoutes.DISPLAY, "Display Tester", "Dead pixel check, RGB gradients & multi-touch test", Icons.Default.Monitor, "hub_display"),
         UtilityEntry(NexusRoutes.WIDGETS, "Home Widgets", "Pin any of 7 system, clock, music & custom widgets", Icons.Default.Widgets, "hub_widgets"),
         UtilityEntry(NexusRoutes.PERMISSIONS, "Permissions & Privacy Audit", "Inspect & manage optional capabilities in Settings", Icons.Default.Security, "hub_permissions"),
         UtilityEntry(NexusRoutes.CUSTOMIZE, "Dashboard Customization", "Card ordering, visibility, accent color & AMOLED", Icons.Default.Tune, "hub_customize"),
       ),
     ),
+  )
+
+  val quickAdvancedModules = listOf(
+    Triple(NexusRoutes.APP_LOCK, "App Lock", Icons.Default.Lock),
+    Triple(NexusRoutes.SECURE_VAULT, "Vault", Icons.Default.EnhancedEncryption),
+    Triple(NexusRoutes.FLOATING_TOOLS, "Floating", Icons.Default.BubbleChart),
+    Triple(NexusRoutes.EDGE_PANEL, "Edge Panel", Icons.AutoMirrored.Filled.ViewSidebar),
+    Triple(NexusRoutes.GESTURE_STUDIO, "Gestures", Icons.Default.Gesture),
   )
 
   Column(
@@ -127,18 +146,35 @@ fun UtilitiesHubScreen(
   ) {
     NexusModuleHeader(
       title = "NEXUS Suite",
-      subtitle = "Device, Customization, Media, Management & Tools",
+      subtitle = "Privacy, Overlays, Gestures, Customization & Media",
     )
+
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .horizontalScroll(rememberScrollState())
+        .padding(horizontal = 16.dp, vertical = 4.dp),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      quickAdvancedModules.forEach { (route, label, icon) ->
+        AssistChip(
+          onClick = { onNavigate(route) },
+          label = { Text(label) },
+          leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = colors.accent) },
+        )
+      }
+    }
 
     LazyColumn(
       modifier = Modifier
         .fillMaxSize()
+        .padding(bottom = contentPadding.calculateBottomPadding())
         .testTag("utilities_hub_list"),
       contentPadding = PaddingValues(
         start = 16.dp,
         end = 16.dp,
         top = 4.dp,
-        bottom = contentPadding.calculateBottomPadding() + 24.dp,
+        bottom = 24.dp,
       ),
       verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {

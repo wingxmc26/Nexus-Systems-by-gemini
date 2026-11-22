@@ -2,6 +2,10 @@ package com.example.ui.screens
 
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -71,6 +75,7 @@ import com.example.ui.components.StatusPill
 import com.example.ui.theme.NexusThemeExtras
 import com.example.ui.viewmodel.DepthClockViewModel
 import com.example.widget.NexusDepthClockWidgetProvider
+import com.example.widget.NexusWidgetAlarmScheduler
 import com.example.widget.WidgetBitmapRenderer
 import kotlinx.coroutines.delay
 
@@ -313,6 +318,24 @@ fun DepthClockScreen(
           state.statusMessage?.let { msg ->
             Spacer(modifier = Modifier.height(6.dp))
             Text(msg, style = MaterialTheme.typography.bodyMedium, color = colors.nominal)
+          }
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !NexusWidgetAlarmScheduler.canScheduleExact(context)) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+              onClick = {
+                runCatching {
+                  context.startActivity(
+                    Intent(
+                      Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                      Uri.fromParts("package", context.packageName, null),
+                    )
+                  )
+                }
+              },
+              modifier = Modifier.fillMaxWidth(),
+            ) {
+              Text("Allow Exact Alarms for Analog/Dual Clock Sync")
+            }
           }
         }
       }

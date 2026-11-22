@@ -3,12 +3,16 @@ package com.example.widget
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
+import com.example.widget.engine.WidgetMediaSessionHub
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 object NexusWidgetUpdater {
   suspend fun refreshAll(context: Context) = withContext(Dispatchers.IO) {
     val appContext = context.applicationContext
+    NexusWidgetLiveTicker.ensureRegistered(appContext)
+    WidgetMediaSessionHub.attachSessionObserver(appContext)
+    NexusWidgetSyncJobService.schedulePeriodic(appContext)
     val mgr = runCatching { AppWidgetManager.getInstance(appContext) }.getOrNull() ?: return@withContext
 
     runCatching {
@@ -39,5 +43,6 @@ object NexusWidgetUpdater {
       val ids = mgr.getAppWidgetIds(ComponentName(appContext, NexusMusicWidgetProvider::class.java))
       if (ids.isNotEmpty()) NexusMusicWidgetProvider.updateWidgets(appContext, mgr, ids)
     }
+    runCatching { NexusWidgetAlarmScheduler.rescheduleIfActive(appContext) }
   }
 }

@@ -10,7 +10,6 @@ import com.example.data.model.ActiveChargingSession
 import com.example.data.model.BatteryTelemetry
 import com.example.data.model.DashboardPreferences
 import com.example.data.model.HardwareTelemetry
-import com.example.data.model.StorageOverview
 import com.example.di.NexusContainer
 import com.example.widget.NexusWidgetUpdater
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,7 +28,6 @@ import kotlinx.coroutines.launch
 data class DashboardOverviewState(
   val isLoading: Boolean = true,
   val hardware: HardwareTelemetry? = null,
-  val storage: StorageOverview? = null,
   val error: String? = null,
 )
 
@@ -80,13 +78,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         flow {
           while (true) {
             val hw = runCatching { container.hardwareDataSource.readHardwareTelemetry() }.getOrNull()
-            val st = runCatching { container.storageDataSource.readStorageOverview() }.getOrNull()
             emit(
               DashboardOverviewState(
                 isLoading = false,
                 hardware = hw,
-                storage = st,
-                error = if (hw == null && st == null) "Unable to read system information" else null,
+                error = if (hw == null) "Unable to read system information" else null,
               )
             )
             delay(prefs.refreshIntervalMs)
@@ -130,11 +126,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
   fun refreshNow() {
     viewModelScope.launch {
       val hw = runCatching { container.hardwareDataSource.readHardwareTelemetry() }.getOrNull()
-      val st = runCatching { container.storageDataSource.readStorageOverview() }.getOrNull()
       _dashboardState.value = DashboardOverviewState(
         isLoading = false,
         hardware = hw,
-        storage = st,
       )
       runCatching { NexusWidgetUpdater.refreshAll(getApplication()) }
     }
